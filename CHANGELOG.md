@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.6.0 — 2026-10-20
+
+- 表格方案收敛为两套：`general`（内置）与 `custom`（可安装、可改）
+- 合并原 work/story 为自定义模板：4 个固定字段 + 3 个可改槽位
+- 新增 active profile（`data/profile.json`）：新写入只用当前方案，历史保留可读
+- CLI `profile use` / `path`；UI 侧栏方案切换；旧方案记录打标签
+- 非当前方案写入返回 `PROFILE_INACTIVE`；当前方案不可删除
+- 自定义删字段后，旧字段在详情“其他字段”只读显示
+
 ## 2.5.0 — 2026-10-20
 
 - 三套字段方案：`general` 内置；`work`（长工作）/ `story`（长剧情）可单独安装

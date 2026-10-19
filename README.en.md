@@ -41,13 +41,20 @@ Host-specific examples: [docs/HOSTS.md](docs/HOSTS.md) (Claude Desktop, Cursor, 
 
 Give the agent the behavior contract: [docs/AGENTS.md](docs/AGENTS.md) or the compressed [docs/SKILL.md](docs/SKILL.md).
 
-## Profiles
+## Profiles (choose one)
 
-Default `general` has seven fields. `work` and `story` are optional packs:
+| Profile | Source | Fields |
+|---|---|---|
+| `general` | built-in, default | time / place / people / event / cause / result / key point |
+| `custom` | install & edit | 4 fixed fields + custom slots |
+
+Only one profile is active at a time. New writes use the active profile;
+existing records keep their original schema and stay readable.
 
 ```bash
-node dist/cli.js profile install work
-node dist/cli.js profile install story
+node dist/cli.js profile install custom --file profiles/custom.json
+node dist/cli.js profile use custom
+node dist/cli.js profile use general
 ```
 
 See [docs/PROFILES.md](docs/PROFILES.md).

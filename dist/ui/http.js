@@ -183,7 +183,7 @@ export function createUiServer(repo, config) {
                 return;
             }
             if (req.method === "GET" && p === "/api/health") {
-                json(res, 200, { ok: true, name: "northstar-memory", version: "2.5.0" });
+                json(res, 200, { ok: true, name: "northstar-memory", version: "2.6.0" });
                 return;
             }
             if (req.method === "GET" && p === "/api/stats") {
@@ -204,7 +204,18 @@ export function createUiServer(repo, config) {
                 return;
             }
             if (req.method === "GET" && p === "/api/profiles") {
-                json(res, 200, { ok: true, profiles: repo.profilesList(), default: "general" });
+                json(res, 200, { ok: true, profiles: repo.profilesList(), active: repo.activeProfileId() });
+                return;
+            }
+            if (req.method === "POST" && p === "/api/profile/active") {
+                const body = await readBody(req);
+                const id = String(body.id || "").trim();
+                if (!id) {
+                    json(res, 400, { ok: false, error: "id required" });
+                    return;
+                }
+                const prof = repo.setActiveProfile(id);
+                json(res, 200, { ok: true, active: prof.id, name: prof.name });
                 return;
             }
             if (req.method === "GET" && p === "/api/conflicts") {

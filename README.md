@@ -101,26 +101,26 @@ node dist/cli.js export [--out backup.json]
 
 全局参数：`--data <dir>`、`--range-every <n>`。
 
-## 三套字段方案（profiles）
+## 两套表格（二选一）
 
-默认 **general**（七字段：时间/地点/人物/事情/原因/结果/重点）。
-另外两套需要单独安装：
-
-| 方案 | 用途 | 字段 |
+| 方案 | 来源 | 字段 |
 |---|---|---|
-| `work` | 长工作：目标、进展、决策、阻塞、下一步 | 8 个 |
-| `story` | 长剧情：时间线、场景、人物、关系、事件、伏笔、状态、下一步 | 8 个 |
+| `general` 通用 | 内置，默认 | 时间、地点、人物、事情、原因、结果、重点 |
+| `custom` 自定义 | 需安装，可改 | 4 个固定字段 + 自定义槽位 |
+
+同一时间只启用一套。启用哪套，**新写入**就用哪套；历史记录保留原方案，仍可阅读/编辑。
 
 ```bash
-node dist/cli.js profile install work     # 从 GitHub 下载
-node dist/cli.js profile install story
+node dist/cli.js profile install custom --file profiles/custom.json
+node dist/cli.js profile use custom
+node dist/cli.js profile use general     # 切回
 node dist/cli.js profile list
 ```
 
-安装到 `data/profiles/`，随数据目录同步；保存时传 `profile: "work"`。
-字段定义、自定义方式见 **[docs/PROFILES.md](docs/PROFILES.md)**。
+自定义模板固定 4 个字段（时间 / 事件 / 结果 / 下一步），其余槽位改 `label`、删减或新增即可。
+详见 **[docs/PROFILES.md](docs/PROFILES.md)**。
 
-![长工作方案](docs/screenshots/profile-work.png)
+![自定义方案](docs/screenshots/profile-custom.png)
 
 ## 跨设备 / 跨网络（本地优先）
 

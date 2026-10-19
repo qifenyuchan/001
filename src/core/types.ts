@@ -209,7 +209,8 @@ export type ErrorCode =
   | "CORRUPT_RECORD"
   | "LOCK_TIMEOUT"
   | "INVALID_PROFILE"
-  | "PROFILE_NOT_FOUND";
+  | "PROFILE_NOT_FOUND"
+  | "PROFILE_INACTIVE";
 
 export class NorthstarError extends Error {
   code: ErrorCode;

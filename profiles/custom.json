@@ -1,0 +1,17 @@
+{
+  "schema": 1,
+  "id": "custom",
+  "name": "自定义",
+  "description": "固定 4 个核心字段，其余字段自行增删改；与通用方案二选一。",
+  "title_field": "事件",
+  "excerpt_field": "结果",
+  "fields": [
+    { "key": "时间", "label": "时间", "weight": 1, "max_chars": 40, "hint": "日期或故事内时间" },
+    { "key": "事件", "label": "事件 / 进展", "weight": 3, "required": true, "max_chars": 500, "hint": "本轮发生了什么、推进了什么" },
+    { "key": "结果", "label": "结果 / 状态", "weight": 2.5, "required": true, "max_chars": 500, "hint": "可验证的结果，或此刻的状态" },
+    { "key": "下一步", "label": "下一步", "weight": 2, "max_chars": 400, "hint": "下一轮从哪继续" },
+    { "key": "自定义1", "label": "自定义字段 1", "weight": 2, "max_chars": 400, "hint": "改成你需要的字段名（改 label 即可）" },
+    { "key": "自定义2", "label": "自定义字段 2", "weight": 2, "max_chars": 400, "hint": "例如：项目 / 人物 / 决策 / 伏笔" },
+    { "key": "自定义3", "label": "自定义字段 3", "weight": 2, "max_chars": 400, "hint": "不需要就删掉这一项" }
+  ]
+}

@@ -11,6 +11,8 @@ export function buildAutoRange(repo, sessionId, from, to) {
         return { ok: false, reason: `not-enough-turns(${turns.length})` };
     }
     const profile = repo.profileOf(turns[0].profile);
+    if (profile.id !== repo.activeProfileId())
+        return { ok: false, reason: "profile-inactive" };
     const uniq = (vals, max) => {
         const out = [];
         for (const v of vals) {

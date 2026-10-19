@@ -105,6 +105,7 @@ export class RepoStore {
   private byId = new Map<string, MemoryRecord>();
   private profiles: ProfileRegistry;
   private defaultProfile: string;
+  private active: string;
   private corruptedCount = 0;
   private lastMaintenance = 0;
   private lastMergeCount = 0;
@@ -122,6 +123,7 @@ export class RepoStore {
     this.lockDir = path.join(this.dataDir, ".locks");
     this.defaultProfile = opts.defaultProfile || "general";
     this.profiles = new ProfileRegistry(this.dataDir);
+    this.active = this.readActiveProfile();
     this.migrateLegacyLayout();
     for (const d of [this.sessionsDir, this.trashDir, this.tombDir, this.conflictDir, this.lockDir]) ensureDir(d);
     this.writeSpaceMeta();
@@ -283,7 +285,31 @@ export class RepoStore {
     return this.profiles.get(id) || GENERAL_PROFILE;
   }
 
+  private profileFile(): string {
+    return path.join(this.dataDir, "profile.json");
+  }
+
+  private readActiveProfile(): string {
+    const r = readJson<{ active?: string }>(this.profileFile());
+    const id = r.ok && r.value && typeof r.value.active === "string" ? r.value.active : "";
+    if (id && this.profiles.get(id)) return id;
+    return "general";
+  }
+
+  activeProfileId(): string {
+    return this.active;
+  }
+
+  setActiveProfile(id: string): Profile {
+    const p = this.profiles.require(id);
+    this.active = p.id;
+    atomicWriteJson(this.profileFile(), { schema: 1, active: p.id, updated_at: Date.now() });
+    return p;
+  }
+
   profilesList(): Profile[] {
+    this.profiles.refresh();
+    if (!this.profiles.get(this.active)) this.active = "general";
     return this.profiles.list();
   }
 
@@ -292,6 +318,7 @@ export class RepoStore {
   }
 
   removeProfile(id: string): boolean {
+    if (id === this.active) throw new NorthstarError("PROFILE_INACTIVE", `cannot remove the active profile: ${id}`);
     return this.profiles.remove(id);
   }
 
@@ -425,11 +452,15 @@ export class RepoStore {
       const turnNo = input.turn_no && Number(input.turn_no) > 0 ? Math.floor(Number(input.turn_no)) : Math.max(0, ...turns.keys()) + 1;
       const existingName = turns.get(turnNo);
       const existing = existingName ? this.readRecordFile(st, existingName) || undefined : undefined;
-      const wanted = String(input.profile || "").trim();
-      if (existing && wanted && wanted !== existing.profile) {
+      const active = this.activeProfileId();
+      const wanted = String(input.profile || "").trim() || active;
+      const profile = this.profiles.require(wanted);
+      if (wanted !== active) {
+        throw new NorthstarError("PROFILE_INACTIVE", `active profile is ${active}; run: node dist/cli.js profile use ${active}`);
+      }
+      if (existing && wanted !== existing.profile) {
         throw new NorthstarError("CONFLICT", `profile cannot change on the same turn (${existing.profile} -> ${wanted})`);
       }
-      const profile = this.profiles.require(existing ? existing.profile : wanted || this.defaultProfile);
       const built = buildTurn(
         { ...input, session_id: sessionId, turn_no: turnNo },
         {
@@ -485,11 +516,15 @@ export class RepoStore {
       const fileName = `range-${String(from).padStart(4, "0")}-${String(to).padStart(4, "0")}.json`;
       const exists = fs.existsSync(path.join(st.dir, fileName));
       const existing = exists ? this.readRecordFile(st, fileName) || undefined : undefined;
-      const wanted = String(input.profile || "").trim();
-      if (existing && wanted && wanted !== existing.profile) {
+      const active = this.activeProfileId();
+      const wanted = String(input.profile || "").trim() || active;
+      const profile = this.profiles.require(wanted);
+      if (wanted !== active) {
+        throw new NorthstarError("PROFILE_INACTIVE", `active profile is ${active}; run: node dist/cli.js profile use ${active}`);
+      }
+      if (existing && wanted !== existing.profile) {
         throw new NorthstarError("CONFLICT", `profile cannot change on the same range (${existing.profile} -> ${wanted})`);
       }
-      const profile = this.profiles.require(existing ? existing.profile : wanted || this.defaultProfile);
       const built = buildRange(
         { ...input, session_id: sessionId, range_from: from, range_to: to },
         {

@@ -1,6 +1,6 @@
 {
   "name": "northstar-memory",
-  "version": "2.5.0",
+  "version": "2.6.0",
   "description": "Host-agnostic long-term memory for AI agents: per-turn summaries, previous-turn injection, editable repository.",
   "type": "module",
   "bin": {

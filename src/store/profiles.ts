@@ -128,7 +128,11 @@ export class ProfileRegistry {
   }
 
   require(id: string | undefined): Profile {
-    const p = this.get(id);
+    let p = this.get(id);
+    if (!p) {
+      this.refresh();
+      p = this.get(id);
+    }
     if (!p) throw new NorthstarError("PROFILE_NOT_FOUND", `profile not installed: ${id}. Run: node dist/cli.js profile install ${id}`);
     return p;
   }

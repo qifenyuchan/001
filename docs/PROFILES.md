@@ -1,121 +1,84 @@
-# 字段方案（Profiles）
+# 表格方案：通用 / 自定义（二选一）
 
-一条记忆存什么字段，由 **profile** 决定。默认是 `general`（七字段）；`work` / `story` 不内置，需要单独安装。
+只有两套表格，且**同一时间只能启用一套**：
 
-## 三套方案
+| 方案 | 来源 | 字段 |
+|---|---|---|
+| `general` 通用 | 内置，默认 | 时间、地点、人物、事情、原因、结果、重点（7 个） |
+| `custom` 自定义 | 需安装，可改 | 4 个固定字段 + 自定义槽位 |
 
-### general（内置，默认）
+“启用”的这套叫 **active profile**，决定**新写入**用哪套表。
+历史记录保留原来的方案，仍可阅读/编辑；但不能再以非当前方案写入。
+
+## 自定义表格
+
+模板在 `profiles/custom.json`，安装后复制到 `data/profiles/custom.json`。
+
+固定字段（不建议删）：
 
 | 字段 | 必填 | 说明 |
 |---|---|---|
-| 时间 | | 日期或相对时间 |
-| 地点 | | 地点 / 项目 / 环境，可写“无” |
-| 人物 | | 参与者，可写“无” |
-| 事情 | ✅ | 一句话说清发生了什么 |
-| 原因 | | 为什么会这样 |
-| 结果 | ✅ | 可验证的产出 / 结论 |
-| 重点 | | 下一轮最该记住的 |
+| 时间 | | 日期或故事内时间 |
+| 事件 / 进展 | ✅ | 本轮发生了什么、推进了什么 |
+| 结果 / 状态 | ✅ | 可验证的结果，或此刻的状态 |
+| 下一步 | | 下一轮从哪继续 |
 
-标题取 `事情`，摘要取 `结果`。
+默认还带 3 个自定义槽位（`自定义1/2/3`），可以：
 
-### work（长工作，需安装）
+- 改 `label`：显示名改成“项目 / 人物 / 决策 / 伏笔 / 关系…”等
+- 改 `hint`：给 Agent 的填写提示
+- 删掉不需要的槽位
+- 追加新字段（1–12 个，`key` 不能重复）
 
-适合跨多轮的项目/工程任务，强调“随时能接上”。
+> 建议：`key` 定下来后不要改。改 `key` 等于换字段，旧数据不会自动映射；
+> 旧字段仍会在详情页的“其他字段（只读）”里显示。
 
-| 字段 | 必填 |
-|---|---|
-| 时间 | |
-| 项目 / 模块 | |
-| 目标 | ✅ |
-| 已完成 / 进展 | |
-| 关键决策 | |
-| 阻塞 / 风险 | |
-| 相关文件 / 命令 | |
-| 下一步 | ✅ |
-
-标题取 `目标`，摘要取 `下一步`。
-
-### story（长剧情，需安装）
-
-适合长篇叙事 / 角色扮演，强调连续性。
-
-| 字段 | 必填 |
-|---|---|
-| 时间线 | |
-| 场景 | |
-| 人物 | |
-| 关系变化 | |
-| 事件 | ✅ |
-| 伏笔 / 线索 | |
-| 当前状态 | ✅ |
-| 下一步 / 走向 | |
-
-标题取 `事件`，摘要取 `当前状态`。
-
-## 安装 / 查看 / 移除
+### 安装
 
 ```bash
-# 从 GitHub 下载并安装（默认源 raw.githubusercontent.com）
-node dist/cli.js profile install work
-node dist/cli.js profile install story
+# 从 GitHub 下载（需要仓库已推送）
+node dist/cli.js profile install custom
 
-# 离线安装（用仓库里的 profiles/*.json）
-node dist/cli.js profile install work --file profiles/work.json
+# 离线：用仓库里的模板
+node dist/cli.js profile install custom --file profiles/custom.json
 
-# 查看当前可用方案
-node dist/cli.js profile list
-
-# 移除
-node dist/cli.js profile remove work
+# 查看安装位置
+node dist/cli.js profile path
 ```
 
-安装后写入 `data/profiles/<id>.json`，随 `data/` 一起同步到其他设备。
-另一台设备没有安装时，记录仍能读，但 UI 会标“未安装”，保存会提示先安装。
+安装后编辑 `data/profiles/custom.json`，改完重启服务或重新打开 UI 生效。
 
-## 使用
-
-MCP：
-
-```json
-{
-  "session_id": "proj-x",
-  "profile": "work",
-  "fields": {
-    "时间": "2026-10-20",
-    "项目": "northstar",
-    "目标": "实现 profile 引擎",
-    "进展": "存储/注入/UI 完成",
-    "决策": "JSON 包，general 内置",
-    "阻塞": "无",
-    "文件": "src/store/profiles.ts",
-    "下一步": "补文档"
-  }
-}
-```
-
-CLI：
+### 启用 / 切回
 
 ```bash
-node dist/cli.js save --session proj-x --profile work --fields '{"目标":"...","下一步":"..."}'
+node dist/cli.js profile use custom
+node dist/cli.js profile use general
+node dist/cli.js profile list      # 显示 active
 ```
 
-- 不传 `profile` 时使用 `general`
-- 同一轮不允许切换 profile（会返回 `CONFLICT`）
-- `memory_recall` 会按记录自己的 profile 渲染，标头带方案名
-- 自动范围总结也按 profile 聚合字段
+UI 左侧栏底部也有“字段方案”下拉框，切换前会确认。
 
-## 自定义方案
+## 切换时发生什么
 
-复制 `profiles/work.json`，改 `id`、`name`、`fields` 后安装：
+1. **新写入**立即使用新方案；不传 `profile` 时自动用 active。
+2. **历史记录**保留原方案，不删除、不改写；列表里会给非当前方案的记录加标签。
+3. 用非 active 方案写入会报 `PROFILE_INACTIVE`，需要先 `profile use` 切过去。
+4. 同一轮已有记录不允许换方案（报 `CONFLICT`）。
+5. 旧方案的自动范围总结会跳过（`profile-inactive`），避免混表。
+6. 当前方案不能被 `profile remove` 删除。
 
-```bash
-node dist/cli.js profile install myflow --file ./myflow.json
-```
+这是一次“软切换”：不清库、不迁移、不丢历史。代价是新旧记录可能同时存在，
+UI 会标明每条记录属于哪套表。
 
-规则：
+## 自定义字段的校验
 
 - `id`：`[a-z0-9_-]{1,32}`，不能叫 `general`
-- 字段 1–12 个，`key` 不能重复，只允许中英文/数字/下划线/短横线
+- 字段 1–12 个；`key` 唯一，只允许中英文/数字/下划线/短横线
 - `title_field` / `excerpt_field` 必须是已有字段
-- 每字段可设 `weight`（检索权重 0.5–5）、`max_chars`、`required`
-- 安装时会校验；非法包会被拒绝，不影响已有数据
+- `weight` 0.5–5（检索权重）；`max_chars` 20–2000；`required` 布尔
+- 安装时校验，非法包会被拒绝，不影响已有数据
+
+## 多设备
+
+`data/profiles/*.json` 与 `data/profile.json` 都在数据目录里，随云盘/git 同步。
+另一台设备没装 custom 时，记录仍能读，保存会提示先安装。

@@ -41,7 +41,9 @@ async function loadBase(){
   ]);
   state.stats=stats;state.sessions=sessions.sessions||[];state.conflicts=conf.reports||[];state.trash=trash.items||[];
   state.profileList=prof.profiles||[];state.profiles=Object.fromEntries(state.profileList.map(p=>[p.id,p]));
+  state.activeProfile=prof.active||"general";
   if(!state.profiles.general)state.profiles.general=FALLBACK_PROFILE;
+  renderProfileSwitch();
   $("#cAll").textContent=stats.total;
   $("#cSess").textContent=state.sessions.length;
   $("#cConf").textContent=state.conflicts.length||"";
@@ -53,6 +55,20 @@ async function loadBase(){
   txt.textContent=confN>0?`${confN} 个冲突已合并`:stats.device_id;
   sync.title=`设备 ${stats.device_id} · 墓碑 ${stats.tombstones||0} · 冲突 ${confN}`;
   renderSideSessions();
+}
+function renderProfileSwitch(){
+  const sel=$("#profileSwitch");if(!sel)return;
+  sel.innerHTML=state.profileList.map(p=>`<option value="${esc(p.id)}" ${p.id===state.activeProfile?"selected":""}>${esc(p.name)}（${esc(p.id)}）</option>`).join("");
+  sel.onchange=async()=>{
+    const id=sel.value;
+    if(id===state.activeProfile)return;
+    if(!confirm("切换后：新写入使用「"+id+"」方案，历史记录保留可读但不会被改写。继续？")){sel.value=state.activeProfile;return;}
+    try{
+      await post("/api/profile/active",{id});
+      toast("已切换到 "+id);
+      await loadBase();await route();
+    }catch(e){toast("切换失败："+e.message);sel.value=state.activeProfile;}
+  };
 }
 function renderSideSessions(){
   $("#sideSessions").innerHTML=state.sessions.map(s=>`
@@ -159,7 +175,7 @@ function rowHtml(r){
       <div class="row-title"><span class="tag ${isRange?"range":""}">${tag}</span><span class="t-text">${esc(title)}</span><span class="dot ${qcls(r.quality)}"></span></div>
       <div class="row-excerpt">${isRange?'<span class="ex-label">范围总结</span>':""}${esc(excerpt)}</div>
     </div>
-    <div class="row-meta">${r.truncated?'<span class="badge">截断</span>':""}<span class="session" title="${esc(r.session_name||r.session_key)}">${esc(r.session_name||r.session_key)}</span></div>
+    <div class="row-meta">${r.truncated?'<span class="badge">截断</span>':""}${r.profile&&r.profile!==state.activeProfile?`<span class="tag">${esc(r.profile_name||r.profile)}</span>`:""}<span class="session" title="${esc(r.session_name||r.session_key)}">${esc(r.session_name||r.session_key)}</span></div>
   </div>`;
 }
 
@@ -277,6 +293,11 @@ async function openRecord(id,keepView){
     return `<div class="fld"><label><span>${esc(f.label||f.key)}</span>${miss.has(f.key)?'<span class="miss">缺失</span>':""}</label>
       <textarea id="f-${i}" data-field="${esc(f.key)}" class="${miss.has(f.key)?"missing":""}" rows="${rows}">${esc(v)}</textarea></div>`;
   }).join("");
+  const known=new Set(profile.fields.map(f=>f.key));
+  const extra=Object.keys(rec.fields||{}).filter(k=>!known.has(k)&&String(rec.fields[k]||"").trim());
+  const extraHtml=extra.length?`<details class="raw"><summary>其他字段（当前方案未定义，${extra.length} 项，只读）</summary>
+    ${extra.map(k=>`<div class="fld"><label><span>${esc(k)}</span></label><textarea readonly>${esc(rec.fields[k])}</textarea></div>`).join("")}
+  </details>`:"";
   $("#panel").innerHTML=`
     <div class="panel-head">
       <div class="t"><button class="icon-btn panel-back" onclick="closePanel()" aria-label="返回">←</button><h2>${esc((rec.fields&&(rec.fields[profile.title_field]||rec.fields["事情"]))||"(未命名)")}</h2><button class="icon-btn" onclick="closePanel()" aria-label="关闭">✕</button></div>
@@ -290,6 +311,7 @@ async function openRecord(id,keepView){
     </div>
     <div class="panel-body">
       ${fieldsHtml}
+      ${extraHtml}
       <details class="raw"><summary>原文（${rec.raw_text?rec.raw_text.length:0} 字，仅本地）</summary>
         <textarea id="f-raw">${esc(rec.raw_text||"")}</textarea></details>
     </div>

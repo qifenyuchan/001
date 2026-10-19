@@ -127,7 +127,14 @@ try {
     case "profile": {
       const sub = pos[0] || "list";
       if (sub === "list") {
-        out({ ok: true, profiles: repo.profilesList(), default: "general" });
+        out({ ok: true, profiles: repo.profilesList(), active: repo.activeProfileId() });
+      } else if (sub === "use") {
+        const id = String(pos[1] || flags.id || "").trim();
+        if (!id) throw new NorthstarError("INVALID_ARG", "usage: profile use <general|custom>");
+        const p = repo.setActiveProfile(id);
+        out({ ok: true, active: p.id, name: p.name, note: "新写入使用该方案；历史记录保留可读，不会被改写" });
+      } else if (sub === "path") {
+        out({ ok: true, dir: config.dataDir + "/profiles", file: config.dataDir + "/profiles/" + repo.activeProfileId() + ".json" });
       } else if (sub === "install") {
         const id = String(pos[1] || flags.id || "").trim();
         if (!/^[a-z0-9_-]{1,32}$/.test(id)) throw new NorthstarError("INVALID_ARG", "usage: profile install <work|story> [--file path]");
@@ -199,7 +206,7 @@ try {
           "  node dist/cli.js list [--session id] [--kind turn|range] [--page N] [--page-size 20]",
           "  node dist/cli.js get <id>",
           "  node dist/cli.js sessions [--all]",
-          "  node dist/cli.js profile [list|install work|story|remove <id>]",
+          "  node dist/cli.js profile [list|use <id>|install custom|path|remove <id>]",
           "  node dist/cli.js sync [status|doctor]",
           "  node dist/cli.js stats",
           "  node dist/cli.js range --session <id> --from N --to M",
