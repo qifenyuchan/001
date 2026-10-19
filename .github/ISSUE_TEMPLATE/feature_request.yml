@@ -1,0 +1,28 @@
+name: Feature request
+description: 提出一个需求或改进
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: 你遇到的具体问题
+      description: 不要先写方案，先说场景与痛点
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: 你希望的解决方式
+  - type: dropdown
+    id: scope
+    attributes:
+      label: 影响范围
+      options:
+        - 记忆写入/注入
+        - 多设备同步
+        - UI/仓库
+        - 宿主接入
+        - 文档/安装
+        - 其他
+    validations:
+      required: true

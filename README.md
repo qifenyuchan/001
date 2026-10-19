@@ -1,5 +1,7 @@
 # 北极星记忆 · Northstar Memory
 
+[English](README.en.md) · 中文
+
 给任何支持 MCP 的 AI Agent 装"长期记忆"的独立服务。**不绑定宿主、零运行时依赖、下载即用。**
 
 > 只有三件事：
@@ -65,6 +67,7 @@ AI 仍能从这条滚动锚点接上）。完整历史不注入，用 `memory_se
 
 `--tools full`（或 `tools_mode: "full"`）额外暴露：`memory_get` / `memory_list` / `memory_update` / `memory_delete` / `memory_restore` / `memory_stats`。
 
+> 宿主接入示例（Claude Desktop / Cursor / WorkBuddy / ZCode）见 **[docs/HOSTS.md](docs/HOSTS.md)**。
 > 每轮 token 与延迟实测、规模边界、减压开关见 **[docs/LOAD.md](docs/LOAD.md)**：
 > 每轮约 600–800 tokens、recall <1ms、无外部模型调用；工具定义 lite 3.1KB / full 5.5KB。
 
@@ -199,4 +202,4 @@ npm run build   # TypeScript 构建（仅开发需要；dist/ 已随包提供）
 
 ## License
 
-MIT
+MIT — 见 [LICENSE](LICENSE)。

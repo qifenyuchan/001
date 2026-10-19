@@ -19,7 +19,7 @@
 | 安全基线（路径穿越/CSRF/并发） | ✅ 已修并回归 |
 | 文档（README/AGENTS/SKILL/DATA_FORMAT/REMOTE/LOAD） | ✅ 中文为主 |
 
-**缺的不是功能，是"产品外壳"**：没有 LICENSE、没有 npm 发布、没有 GitHub 仓库与 CI、没有一个 3 分钟 demo、没有宿主兼容矩阵、没有社区入口。
+**缺的不是功能，是"产品外壳"**：LICENSE/CI/宿主示例已补；还差 npm 发布、GitHub 远程仓库、真实用户与社区入口。
 
 ---
 
@@ -104,13 +104,13 @@ SSO、审计导出、私有部署镜像、支持合同。
 - [x] 核心功能 / 测试 / 安全基线
 - [x] README、AGENTS、SKILL、DATA_FORMAT、REMOTE、LOAD
 - [x] npm `files` 白名单（只发 dist/ui/docs/README/config，772KB）
-- [ ] **LICENSE**（需拍板，见第八节）
-- [ ] GitHub 仓库 + CI（build + test）+ issue/PR 模板
+- [x] **LICENSE = MIT**
+- [x] CI（build + test）+ issue 模板（本地已建）
 - [ ] npm 发布（确认包名 `northstar-memory` 可用）
-- [ ] 3 分钟 quickstart + 4 个宿主配置示例
+- [x] 宿主配置示例（docs/HOSTS.md：Claude/Cursor/WorkBuddy/ZCode）
 - [ ] demo 数据 / GIF / 截图（已有静态图）
-- [ ] CHANGELOG + 版本策略（是否从 2.4.0 直接发 1.0？）
-- [ ] 中英双语 README
+- [x] CHANGELOG；版本策略待定（2.4.0 → 1.0？）
+- [x] 中英双语 README（README.en.md）
 - [ ] 隐私说明：本地版不收集数据；托管版另写 DPA
 
 ---
@@ -129,7 +129,7 @@ SSO、审计导出、私有部署镜像、支持合同。
 ### 0. 已拍板（2026-10-19）
 - **首发社区 = 中文 Agent 生态**（WorkBuddy / ZCode / Cherry Studio / Dify），README 出英文版
 - **收费 = 暂不收费**，先做采用与留存；等 20 个愿付费信号再启动 Phase 2
-- **License = 待定**（见下）
+- **License = MIT（已定，2026-10-19）**
 
 ### 1. License 速查与选择
 
