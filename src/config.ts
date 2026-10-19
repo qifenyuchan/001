@@ -12,6 +12,7 @@ export interface CliOptions {
   httpHost?: string;
   httpPort?: number;
   authToken?: string;
+  toolsMode?: "lite" | "full";
   noUi?: boolean;
   noMcp?: boolean;
   uiOnly?: boolean;
@@ -27,6 +28,7 @@ export interface Config {
   httpHost: string;
   httpPort: number;
   authToken: string;
+  toolsMode: "lite" | "full";
   noUi: boolean;
   noMcp: boolean;
   uiOnly: boolean;
@@ -51,6 +53,7 @@ export function loadConfig(cli: CliOptions = {}): Config {
   const httpHost = cli.httpHost || process.env.TM_HTTP_HOST || fileCfg.http_host || "127.0.0.1";
   const httpPort = Number(cli.httpPort ?? process.env.TM_HTTP_PORT ?? fileCfg.http_port ?? 0);
   const authToken = String(cli.authToken || process.env.TM_AUTH_TOKEN || fileCfg.auth_token || "").trim();
+  const toolsMode = (cli.toolsMode || process.env.TM_TOOLS_MODE || fileCfg.tools_mode || "lite") === "full" ? "full" : "lite";
   const rangeEvery = Math.max(2, Number(cli.rangeEvery ?? process.env.TM_RANGE_EVERY ?? fileCfg.range_every ?? 10));
   const recallMaxChars = Math.max(200, Number(cli.recallMaxChars ?? fileCfg.recall_max_chars ?? 1200));
   const rawHead = Math.max(200, Number(fileCfg.raw_head ?? 1200));
@@ -63,6 +66,7 @@ export function loadConfig(cli: CliOptions = {}): Config {
     httpHost,
     httpPort: isFinite(httpPort) && httpPort > 0 ? httpPort : 0,
     authToken,
+    toolsMode,
     noUi: !!cli.noUi,
     noMcp: !!cli.noMcp,
     uiOnly: !!cli.uiOnly,

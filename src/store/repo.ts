@@ -357,6 +357,24 @@ export class RepoStore {
     return out;
   }
 
+  // 只按文件名取轮次号，避免每次保存解析整个会话（O(N) → O(1) 定位）
+  private turnFileMap(st: SessionState): Map<number, string> {
+    const map = new Map<number, string>();
+    for (const f of listFiles(st.dir)) {
+      const m = /^turn-(\d{4,})\.json$/.exec(f);
+      if (m) map.set(Number(m[1]), f);
+    }
+    return map;
+  }
+
+  private readRecordFile(st: SessionState, fname: string): MemoryRecord | null {
+    const r = readJson(path.join(st.dir, fname));
+    if (!r.ok) return null;
+    const rec = ensureRecordShape(r.value);
+    if (rec) rec.session_key = st.key;
+    return rec;
+  }
+
   private withSessionLock<T>(st: SessionState, fn: () => T): T {
     return withLock(this.lockDir, st.key, fn);
   }
@@ -368,10 +386,11 @@ export class RepoStore {
     let rec!: MemoryRecord;
     let created = false;
     this.withSessionLock(st, () => {
-      // 锁内重新读盘，避免两个进程同时取到同一个 turn_no（P0-4）
-      const fresh = this.scanSessionRecords(st);
-      const turnNo = input.turn_no && Number(input.turn_no) > 0 ? Math.floor(Number(input.turn_no)) : fresh.filter(r => r.kind === "turn").reduce((m, r) => Math.max(m, r.turn_no), 0) + 1;
-      const existing = fresh.find(r => r.kind === "turn" && r.turn_no === turnNo);
+      // 锁内按文件名重取（不解析全量），避免两个进程同时取到同一个 turn_no（P0-4）
+      const turns = this.turnFileMap(st);
+      const turnNo = input.turn_no && Number(input.turn_no) > 0 ? Math.floor(Number(input.turn_no)) : Math.max(0, ...turns.keys()) + 1;
+      const existingName = turns.get(turnNo);
+      const existing = existingName ? this.readRecordFile(st, existingName) || undefined : undefined;
       const built = buildTurn(
         { ...input, session_id: sessionId, turn_no: turnNo },
         {
@@ -422,8 +441,9 @@ export class RepoStore {
     let rec!: MemoryRecord;
     let created = false;
     this.withSessionLock(st, () => {
-      const fresh = this.scanSessionRecords(st);
-      const existing = fresh.find(r => r.kind === "range" && r.range && r.range.from === from && r.range.to === to);
+      const fileName = `range-${String(from).padStart(4, "0")}-${String(to).padStart(4, "0")}.json`;
+      const exists = fs.existsSync(path.join(st.dir, fileName));
+      const existing = exists ? this.readRecordFile(st, fileName) || undefined : undefined;
       const built = buildRange(
         { ...input, session_id: sessionId, range_from: from, range_to: to },
         {

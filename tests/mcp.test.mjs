@@ -10,8 +10,8 @@ import { fileURLToPath } from "node:url";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
-function startServer(dataDir) {
-  const child = spawn("node", [path.join(ROOT, "dist", "server.js"), "--data", dataDir, "--no-ui"], {
+function startServer(dataDir, extraArgs = []) {
+  const child = spawn("node", [path.join(ROOT, "dist", "server.js"), "--data", dataDir, "--no-ui", ...extraArgs], {
     cwd: ROOT,
     stdio: ["pipe", "pipe", "pipe"],
   });
@@ -64,8 +64,8 @@ test("MCP 协议面全链路", async t => {
 
     const list = await s.request("tools/list", {});
     const names = list.result.tools.map(x => x.name);
-    assert.equal(names.length, 9);
-    for (const n of ["memory_save", "memory_recall", "memory_search", "memory_get", "memory_list", "memory_update", "memory_delete", "memory_restore", "memory_stats"]) {
+    assert.equal(names.length, 3, "默认 lite 模式只暴露 3 个工具");
+    for (const n of ["memory_save", "memory_recall", "memory_search"]) {
       assert.ok(names.includes(n), "missing " + n);
     }
 
@@ -92,9 +92,9 @@ test("MCP 协议面全链路", async t => {
     const err = JSON.parse(empty.result.content[0].text);
     assert.equal(err.error.code, "EMPTY_INPUT");
 
+    // lite 模式不暴露 stats；确认调用返回协议错误而不是崩溃
     const stats = await s.request("tools/call", { name: "memory_stats", arguments: {} });
-    const st = JSON.parse(stats.result.content[0].text);
-    assert.equal(st.total, 1);
+    assert.ok(stats.error && stats.error.code === -32601);
 
     assert.deepEqual(s.badLines, [], "stdout 必须全部是 JSON-RPC 行");
   } finally {
@@ -109,6 +109,17 @@ test("未知工具返回协议错误而非崩溃", async () => {
     const r = await s.request("tools/call", { name: "no_such_tool", arguments: {} });
     assert.ok(r.error);
     assert.equal(r.error.code, -32601);
+  } finally {
+    s.child.kill();
+  }
+});
+
+test("full 模式暴露全部 9 个工具", async () => {
+  const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), "northstar-mcp3-"));
+  const s = startServer(dataDir, ["--tools", "full"]);
+  try {
+    const list = await s.request("tools/list", {});
+    assert.equal(list.result.tools.length, 9);
   } finally {
     s.child.kill();
   }

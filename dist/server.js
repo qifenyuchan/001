@@ -3,7 +3,7 @@
 import { loadConfig, PACKAGE_ROOT } from "./config.js";
 import { initLog, logError, logInfo, logWarn } from "./log.js";
 import { RepoStore } from "./store/repo.js";
-import { createTools, INSTRUCTIONS } from "./mcp/tools.js";
+import { createTools, INSTRUCTIONS, defsFor } from "./mcp/tools.js";
 import { startRpcServer } from "./mcp/jsonrpc.js";
 import { startHttpRpcServer } from "./mcp/http.js";
 import { startUiServer } from "./ui/http.js";
@@ -33,6 +33,9 @@ function parseArgs(argv) {
                 break;
             case "--token":
                 out.authToken = next();
+                break;
+            case "--tools":
+                out.toolsMode = next() === "full" ? "full" : "lite";
                 break;
             case "--no-ui":
                 out.noUi = true;
@@ -76,6 +79,7 @@ const repo = new RepoStore({
 });
 repo.open();
 const tools = createTools(repo, config);
+const toolDefs = defsFor(config.toolsMode);
 const servers = [];
 if (!config.noUi) {
     startUiServer(repo, config)
@@ -93,9 +97,9 @@ if (!config.noUi) {
 if (config.httpPort > 0 && !config.noMcp) {
     startHttpRpcServer({
         serverName: "northstar-memory",
-        serverVersion: "2.3.0",
+        serverVersion: "2.4.0",
         instructions: INSTRUCTIONS,
-        tools: tools.defs,
+        tools: toolDefs,
         callTool: tools.callTool,
         authToken: config.authToken,
     }, config.httpHost, config.httpPort)
@@ -111,9 +115,9 @@ if (config.httpPort > 0 && !config.noMcp) {
 if (!config.uiOnly && !config.noMcp) {
     startRpcServer({
         serverName: "northstar-memory",
-        serverVersion: "2.3.0",
+        serverVersion: "2.4.0",
         instructions: INSTRUCTIONS,
-        tools: tools.defs,
+        tools: toolDefs,
         callTool: tools.callTool,
         onShutdown: () => {
             for (const s of servers) {

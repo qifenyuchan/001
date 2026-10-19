@@ -5,6 +5,7 @@
   "http_host": "127.0.0.1",
   "http_port": 0,
   "auth_token": "",
+  "tools_mode": "lite",
   "range_every": 10,
   "recall_max_chars": 1200,
   "raw_head": 1200,

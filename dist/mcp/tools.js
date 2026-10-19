@@ -5,6 +5,7 @@ import { buildAutoRange } from "../features/range.js";
 import { searchRecords } from "../features/search.js";
 import { deriveTitleFromFields } from "../core/title.js";
 import { contentToFields } from "../store/schema.js";
+export const LITE_TOOL_NAMES = ["memory_save", "memory_recall", "memory_search"];
 const SEVEN_SCHEMA = {
     type: "object",
     description: "Seven-field summary. Keys may be Chinese (时间/地点/人物/事情/原因/结果/重点) or English aliases (time/place/people/event/cause/result/keypoint).",
@@ -311,11 +312,17 @@ export function createTools(repo, config) {
         formatRangeBlock,
     };
 }
+export function defsFor(mode) {
+    if (mode === "lite")
+        return TOOL_DEFS.filter(t => LITE_TOOL_NAMES.includes(t.name));
+    return TOOL_DEFS;
+}
 export const INSTRUCTIONS = [
     "Northstar memory protocol.",
     "1) At the START of every user turn, call memory_recall with your stable session_id and put the returned previous-turn block into context.",
-    "2) At the END of every turn, call memory_save with the seven fields. Never skip, even if the turn was truncated: pass truncated=true, the fields you have, and raw_text.",
-    "3) Only the immediately previous turn is injected. Call memory_search for older history; never ask for full history injection.",
-    "4) If memory_save returns range_due, an automatic range summary is created; you may call memory_save once with kind=\"range\", range_from, range_to to replace it with a better one.",
-    "5) Never store API keys, passwords, tokens or other secrets.",
+    "2) At the END of every turn, call memory_save with the seven fields (keep each field concise).",
+    "3) Never skip a turn. If truncated, pass truncated=true, the fields you have, and raw_text (only then — do not send raw_text on normal turns).",
+    "4) Only the immediately previous turn is injected. Call memory_search for older history; never ask for full history injection.",
+    "5) If memory_save returns range_due, an automatic range summary is created; you may replace it via kind=\"range\".",
+    "6) Never store API keys, passwords, tokens or other secrets.",
 ].join("\n");

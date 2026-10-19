@@ -53,17 +53,20 @@ AI 仍能从这条滚动锚点接上）。完整历史不注入，用 `memory_se
 
 > Claude Desktop / Cursor / ZCode / WorkBuddy / 自研 Agent 同理：任何支持 MCP stdio 的宿主都能接。
 
-## 工具面（9 个）
+## 工具面（默认 3 个，可选 9 个）
+
+默认 **lite 模式**只暴露 Agent 真正需要的三个工具（省 token）：
 
 | 工具 | 作用 |
 |---|---|
-| `memory_save` | 轮末保存一轮（或范围总结）。天然键 `(session_id, turn_no)`，重复保存=覆盖，不重复 |
+| `memory_save` | 轮末保存一轮（或范围总结）。天然键 `(session_id, turn_no)`，重复保存=覆盖 |
 | `memory_recall` | 轮首取**恰好一条**上一轮总结（或最近范围总结） |
 | `memory_search` | 按需检索历史（中文 bigram + 字段加权） |
-| `memory_get` / `memory_list` | 读单条 / 分页列表 |
-| `memory_update` | 编辑字段（`expect_revision` 乐观锁；旧版自动进回收站） |
-| `memory_delete` / `memory_restore` | 删除进回收站 / 恢复 |
-| `memory_stats` | 总数、会话、不完整、缺口、数据目录 |
+
+`--tools full`（或 `tools_mode: "full"`）额外暴露：`memory_get` / `memory_list` / `memory_update` / `memory_delete` / `memory_restore` / `memory_stats`。
+
+> 每轮 token 与延迟实测、规模边界、减压开关见 **[docs/LOAD.md](docs/LOAD.md)**：
+> 每轮约 600–800 tokens、recall <1ms、无外部模型调用；工具定义 lite 3.1KB / full 5.5KB。
 
 ## UI
 
@@ -135,11 +138,12 @@ node dist/server.js --data ./data --http-host 0.0.0.0 --http-port 8788 --token <
 | `ui_host` / `ui_port` | `127.0.0.1` / `8777` | 记忆仓库；非回环需令牌 |
 | `http_host` / `http_port` | `127.0.0.1` / `0` | MCP over HTTP（`/mcp`）；0=关闭 |
 | `auth_token` | 空 | 远程访问令牌，或环境变量 `TM_AUTH_TOKEN` |
+| `tools_mode` | `lite` | `lite`=3 个工具（省 token）/ `full`=9 个 |
 | `range_every` | `10` | 每 N 轮自动生成范围总结 |
 | `recall_max_chars` | `1200` | 注入块预算 |
 | `raw_head` / `raw_tail` | `1200` / `600` | 原文头尾窗口 |
 
-环境变量：`TM_DATA_DIR`、`TM_UI_PORT`、`TM_UI_HOST`、`TM_HTTP_PORT`、`TM_HTTP_HOST`、`TM_AUTH_TOKEN`、`TM_RANGE_EVERY`、`TM_DEVICE_ID`。
+环境变量：`TM_DATA_DIR`、`TM_UI_PORT`、`TM_UI_HOST`、`TM_HTTP_PORT`、`TM_HTTP_HOST`、`TM_AUTH_TOKEN`、`TM_RANGE_EVERY`、`TM_TOOLS_MODE`（lite/full）、`TM_DEVICE_ID`。
 
 ## 数据布局（单一真源，无镜像、无 SQLite）
 
@@ -183,7 +187,7 @@ node dist/migrate.js --apply   --from "<旧>/pc_host/data" --data ./data --repor
 ## 测试
 
 ```bash
-npm test        # 11 套件 68 断言：schema/store/recall/range/search/mcp/ui/sync/migrate/auth/security
+npm test        # 11 套件 69 断言：schema/store/recall/range/search/mcp/ui/sync/migrate/auth/security
 npm run build   # TypeScript 构建（仅开发需要；dist/ 已随包提供）
 ```
 
