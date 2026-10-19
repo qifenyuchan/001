@@ -210,10 +210,19 @@ npm test        # 12 套件 74 断言：schema/store/recall/range/search/mcp/ui/
 npm run build   # TypeScript 构建（仅开发需要；dist/ 已随包提供）
 ```
 
-## 明确不做（范围护栏）
+## 文档
 
-不接外部模型/向量检索；不做 SQLite/镜像/双写；不移植插件与宿主钩子；
+- [AI 记忆全景调研（2026-10）](docs/RESEARCH.md)：竞品矩阵、研究共识、功能优先级
+- [Agent 协议](docs/AGENTS.md) · [压缩版 Skill](docs/SKILL.md)
+- [宿主接入](docs/HOSTS.md) · [数据格式](docs/DATA_FORMAT.md)
+- [多设备同步](docs/REMOTE.md) · [压力实测](docs/LOAD.md)
+- [发布手册](docs/PUBLISH.md) · [产品与商业化](docs/PRODUCT.md)
+
+## 明确不做（当前版本的范围护栏）
+
+当前版本不接外部模型/向量检索；不做 SQLite/镜像/双写；不移植插件与宿主钩子；
 不做结晶/lint/裁决台；不做多用户/鉴权/云同步；不做自动抓取对话。
+（其中“可选向量检索、团队空间、加密同步”属于调研后的候选方向，未排期。）
 **没有钩子就无法 100% 强制 Agent 保存**——这是"下载即用"的代价，用约定文档 + 缺口提示 + UI 补记兜底。
 
 ## License
