@@ -134,7 +134,7 @@ npx northstar-memory --data ./demo-data
 | `non-fast-forward` | 远程已有提交；按第 2 节 B 先 pull 合并 |
 | `refusing to merge unrelated histories` | 加 `--allow-unrelated-histories` |
 | npm `403 ... Two-factor authentication or granular access token with bypass 2fa enabled is required` | npm 强制发布必须 2FA。二选一：开 2FA（验证器 App），或创建带 **Bypass 2FA** 的 Granular Access Token |
-| 2FA 二维码扫不到 / 验证器说“QR 无效” | page 上是 **Security key / Passkey** 的二维码，不是 TOTP；点 Continue 用 Windows Hello，或改用手机系统 Passkey（不是验证器 App） |
+| 2FA 二维码扫不到 / 验证器说“QR 无效” | 页面上是 **Security key / Passkey** 的二维码，不是 TOTP；点 Continue 用 Windows Hello，或改用手机系统 Passkey（不是验证器 App） |
 | 验证器提示“验证码错误” | 手机时间不是自动同步；打开“自动设置时间”后重试 |
 | 2FA 设置到一半想退出 | 直接关闭页面，未输入验证码前不会真正启用，不会锁号 |
 | npm `403 Forbidden`（已登录） | 包名被占用或 token 只读；换 scope 或重新登录 |
