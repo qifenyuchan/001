@@ -133,10 +133,33 @@ npx northstar-memory --data ./demo-data
 | `Authentication failed` | 用了账号密码；改用 PAT 或 SSH |
 | `non-fast-forward` | 远程已有提交；按第 2 节 B 先 pull 合并 |
 | `refusing to merge unrelated histories` | 加 `--allow-unrelated-histories` |
-| npm `403 Forbidden` | 包名被占用或没登录；换 scope 或 `npm login` |
-| npm `EOTP` | 开了 2FA；按提示输入一次性验证码 |
+| npm `403 ... Two-factor authentication or granular access token with bypass 2fa enabled is required` | npm 强制发布必须 2FA。二选一：开 2FA（验证器 App），或创建带 **Bypass 2FA** 的 Granular Access Token |
+| 2FA 二维码扫不到 / 验证器说“QR 无效” | ① 页面选的是 **Authenticator app** 而不是 Security key/Passkey；② 用页面上的 **手动密钥（setup key）** 输入；③ 换 Google/Microsoft Authenticator；④ 不要拍屏幕，直接扫或用桌面密码管理器扫描 |
+| 验证器提示“验证码错误” | 手机时间不是自动同步；打开“自动设置时间”后重试 |
+| 2FA 设置到一半想退出 | 直接关闭页面，未输入验证码前不会真正启用，不会锁号 |
+| npm `403 Forbidden`（已登录） | 包名被占用或 token 只读；换 scope 或重新登录 |
+| npm `EOTP` | 开了 2FA；发布时输入 6 位验证码，或 `npm publish --otp=123456` |
 | CI 失败 `tsc not found` | `npm ci` 没装 devDependencies；确认不是 `--production` |
 | 提交作者是 `northstar@local` | 第 0 节没改；重写最近提交或接受 |
+
+### npm 403 的两种解法（详细）
+
+**A. 开 2FA（推荐）**
+1. https://www.npmjs.com/settings/<用户名>/profile → Two-Factor Authentication → Enable
+2. 选择 **Authenticator app**（不是 Security key / Passkey）
+3. 扫不到二维码时，点 “Can't scan?” / 手动输入，复制 base32 密钥到 App
+4. 输入 App 生成的 6 位码完成启用
+5. `npm publish --access public`，提示时输入 6 位码
+
+**B. Granular Access Token（不想装验证器）**
+1. https://www.npmjs.com/settings/<用户名>/tokens → Generate New Token → Granular Access Token
+2. Permissions: Read and write；Packages: All packages；**勾选 Bypass 2FA**
+3. `npm config set //registry.npmjs.org/:_authToken=<令牌>`
+4. `npm publish --access public`
+
+> 令牌等于密码：不要发人、不要截图、不要提交仓库。
+
+**实在搞不定**：先跳过 npm。GitHub 已可用（Download ZIP 或 `git clone`），npm 只是把安装简化成 `npx`，不影响别人使用。
 
 ## 9. 回滚
 
