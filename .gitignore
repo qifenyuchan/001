@@ -4,3 +4,5 @@ migration/backup_pc_host_data_*/
 migration/report_*.json
 *.log
 .DS_Store
+
+*.tgz
