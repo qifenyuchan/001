@@ -1,0 +1,179 @@
+{
+  "generated_at": 1792407483321,
+  "base": "D:\\北极星_turn_memory",
+  "files": 34,
+  "bytes": 289231,
+  "sha256": "4ec7e9e661d50ca5a01dcfe41f00f11a00abd7f1cf818ab09513699a8b9ce99b",
+  "entries": [
+    {
+      "path": "../新建文件夹 (2)/.zcode/workspace/default/pc_host/data/chat_names.json",
+      "bytes": 1635,
+      "sha256": "74da39e98431c7745b757b3712f950857c505ca03dc8264dabc8a17858b37175"
+    },
+    {
+      "path": "../新建文件夹 (2)/.zcode/workspace/default/pc_host/data/index.json",
+      "bytes": 144640,
+      "sha256": "7622dad16571b7273dde943a044834ce9b04d3844bb8a8a926b38dbc21d1362a"
+    },
+    {
+      "path": "../新建文件夹 (2)/.zcode/workspace/default/pc_host/data/repo/zc1445cc/20261007_170043_dumb_25yh.json",
+      "bytes": 5475,
+      "sha256": "64395b1ab36063d42ce2db0dd2559cb6e4350d10589c5d0cfad236359f56c9c6"
+    },
+    {
+      "path": "../新建文件夹 (2)/.zcode/workspace/default/pc_host/data/repo/zc1445cc/20261007_181321_dumb_dz3q.json",
+      "bytes": 5499,
+      "sha256": "5152ce86737a4591f8fbe9b1c6bae202ddbacede09ceb09254985e899187e7c3"
+    },
+    {
+      "path": "../新建文件夹 (2)/.zcode/workspace/default/pc_host/data/repo/zc3e77e1/20261007_150000_dumb_7mkt.json",
+      "bytes": 5466,
+      "sha256": "e3e1ca7892bbfd95545f601a8ee74d1f70e158eaa0301b5d703d044a0dede8f3"
+    },
+    {
+      "path": "../新建文件夹 (2)/.zcode/workspace/default/pc_host/data/repo/zc3e77e1/20261007_151950_dumb_6n9u.json",
+      "bytes": 3195,
+      "sha256": "8f1b8f7eef1495d65a8c6c0e058df172787ef2ec9a9bf4bc6209de615bd7f2a3"
+    },
+    {
+      "path": "../新建文件夹 (2)/.zcode/workspace/default/pc_host/data/repo/zc3e77e1/20261007_163231_dumb_hiac.json",
+      "bytes": 5014,
+      "sha256": "72d0d532158be7b55c2599dbf0b26ae8a9418e0f2cbf8f30cbc54caf22fbea34"
+    },
+    {
+      "path": "../新建文件夹 (2)/.zcode/workspace/default/pc_host/data/repo/zc6f2ac7/20261018_213924_dumb__7nt.json",
+      "bytes": 6151,
+      "sha256": "4ab5c1aa43e3251ca1cad22a3452a7a42d23e4625a22b862b9e732cf131bd681"
+    },
+    {
+      "path": "../新建文件夹 (2)/.zcode/workspace/default/pc_host/data/repo/zc6f2ac7/20261018_213924_dumb_jk48.json",
+      "bytes": 1575,
+      "sha256": "467edcc10ca3da918bbcd3dfff30a5a944187b6d597d2294ced1f9cdeafa95b0"
+    },
+    {
+      "path": "../新建文件夹 (2)/.zcode/workspace/default/pc_host/data/repo/zc6f2ac7/20261018_213924_dumb_jk48.json.bak",
+      "bytes": 1568,
+      "sha256": "189eaac9337c36cb44110b5a058d3ea7ce091c4988bc4d34a1d9c5a6c165e3cc"
+    },
+    {
+      "path": "../新建文件夹 (2)/.zcode/workspace/default/pc_host/data/repo/zc6f2ac7/20261018_214029_dumb_ar95.json",
+      "bytes": 5468,
+      "sha256": "36fed0a27d99468320053c513ee9344d3b4f6d52ac5de55894441e3b088e0bb0"
+    },
+    {
+      "path": "../新建文件夹 (2)/.zcode/workspace/default/pc_host/data/repo/zc6f2ac7/20261018_214050_dumb_9yhz.json",
+      "bytes": 5762,
+      "sha256": "176e5a156e996baa3c07be9ef6559e1236007874587ee1ba116c2bd17cbad414"
+    },
+    {
+      "path": "../新建文件夹 (2)/.zcode/workspace/default/pc_host/data/repo/zc6f2ac7/20261018_214758_dumb_7gdl.json",
+      "bytes": 5517,
+      "sha256": "68793e3845fb95ec1c58655d4d8b318fe1f147a9089e9572a3b3a46b91fa362c"
+    },
+    {
+      "path": "../新建文件夹 (2)/.zcode/workspace/default/pc_host/data/repo/zc6f2ac7/20261018_214758_dumb_f0dw.json",
+      "bytes": 1208,
+      "sha256": "ad8ef69f7889e782bd7d733fc8490deb0de46eea3877c86289c6836ff76e924c"
+    },
+    {
+      "path": "../新建文件夹 (2)/.zcode/workspace/default/pc_host/data/repo/zc6f2ac7/20261018_215513_dumb_6twi.json",
+      "bytes": 5865,
+      "sha256": "d1fe244c8ab35a8dc7f9508c969fd064ddde5970c094ddcc14b34be094cf9d50"
+    },
+    {
+      "path": "../新建文件夹 (2)/.zcode/workspace/default/pc_host/data/repo/zc817c7c/20261007_015203_dumb_8z1r.json",
+      "bytes": 4318,
+      "sha256": "53bee282894f23a0b9c8914ea458522dc04bc052d9d1e437290507b61b09ee49"
+    },
+    {
+      "path": "../新建文件夹 (2)/.zcode/workspace/default/pc_host/data/repo/zc817c7c/20261007_020108_dumb_6w9j.json",
+      "bytes": 4307,
+      "sha256": "7c9d9a245c87f9ef51e97a87eddf393d1620aadacfa79c0001e651574dd6c395"
+    },
+    {
+      "path": "../新建文件夹 (2)/.zcode/workspace/default/pc_host/data/repo/zc817c7c/20261007_024743_dumb_emxa.json",
+      "bytes": 5336,
+      "sha256": "855ab71dba33cbd8a16fd4fbfc832da17a63ef22d7351fe59229fd483e3fe6ec"
+    },
+    {
+      "path": "../新建文件夹 (2)/.zcode/workspace/default/pc_host/data/repo/zc817c7c/20261007_114538_dumb_jy14.json",
+      "bytes": 2986,
+      "sha256": "bef44fcdd1570db658699dd72cc05d0c0e99942982629c7da68d395b2458dabf"
+    },
+    {
+      "path": "../新建文件夹 (2)/.zcode/workspace/default/pc_host/data/repo/zc817c7c/20261007_115013_dumb_7zno.json",
+      "bytes": 5238,
+      "sha256": "3ea9a397a2553b31d95bcc9b02dd8877724df541679ed5661dcf3556cc0bff12"
+    },
+    {
+      "path": "../新建文件夹 (2)/.zcode/workspace/default/pc_host/data/repo/zc817c7c/20261007_121449_dumb_8uq7.json",
+      "bytes": 5455,
+      "sha256": "636cfa9a6b2dfd40292934166252b9dfd086dfca439a4b2c4023fdd70780a3d9"
+    },
+    {
+      "path": "../新建文件夹 (2)/.zcode/workspace/default/pc_host/data/repo/zc9fb60d/20261006_235358_dumb_18ky.json",
+      "bytes": 5319,
+      "sha256": "f7845f8700598337fe661dcbc2d01184b18055db61193e0ce8e564718a6df83d"
+    },
+    {
+      "path": "../新建文件夹 (2)/.zcode/workspace/default/pc_host/data/repo/zc9fb60d/20261007_003535_dumb_8j70.json",
+      "bytes": 5086,
+      "sha256": "bcb6bcdec649ad3c1d698e6fc7a2d9bbbf805cd6eb89dd61dd04a531e21dc90f"
+    },
+    {
+      "path": "../新建文件夹 (2)/.zcode/workspace/default/pc_host/data/repo/zca1c575/20261018_191637_dumb_bs1x.json",
+      "bytes": 2817,
+      "sha256": "6a4430c3b4d2cd8ef30c2efa6541a8244610062fc4861d20b1f93bcf53e61193"
+    },
+    {
+      "path": "../新建文件夹 (2)/.zcode/workspace/default/pc_host/data/repo/zca1c575/20261018_201114_dumb_ftss.json",
+      "bytes": 4616,
+      "sha256": "ba3b1f9806defa8478595d1dcc30c2a3887fe024e06f9d4335085ef08ddd2414"
+    },
+    {
+      "path": "../新建文件夹 (2)/.zcode/workspace/default/pc_host/data/repo/zca1c575/20261018_201123_dumb__47b.json",
+      "bytes": 5105,
+      "sha256": "71826ef05e5fd4a297da030d9abcc85184ace6884e51ab803e08b6e9a92c2a1a"
+    },
+    {
+      "path": "../新建文件夹 (2)/.zcode/workspace/default/pc_host/data/repo/zca1c575/20261018_205225_dumb_1hqs.json",
+      "bytes": 6369,
+      "sha256": "3fa329b741a94e169f9d5205983c478d1f8ed3318991a819f7d243775a3ec4d4"
+    },
+    {
+      "path": "../新建文件夹 (2)/.zcode/workspace/default/pc_host/data/repo/zca1c575/20261018_205225_dumb_icq9.json",
+      "bytes": 1644,
+      "sha256": "2e5b2401c278562fdc94c97490233a5a88f9b7a9f0b5db07b83c87683f5e8149"
+    },
+    {
+      "path": "../新建文件夹 (2)/.zcode/workspace/default/pc_host/data/repo/zca1c575/20261018_212002_dumb_61t6.json",
+      "bytes": 5968,
+      "sha256": "926f066641c3903c46e16d2e91e4973b56da21096e61df2b65ba53d92c7c4b5d"
+    },
+    {
+      "path": "../新建文件夹 (2)/.zcode/workspace/default/pc_host/data/repo/zca1c575/20261018_213343_dumb_ekax.json",
+      "bytes": 1330,
+      "sha256": "271f3c760e132a6e630592a9e50ebac88e0f5c95f60c1460917a283ae2afe865"
+    },
+    {
+      "path": "../新建文件夹 (2)/.zcode/workspace/default/pc_host/data/repo/zca1c575/20261018_213343_dumb_kuas.json",
+      "bytes": 6105,
+      "sha256": "952b949fe99e3605b3757970a4160c068bb8533fea99ed612ea6359357f8d423"
+    },
+    {
+      "path": "../新建文件夹 (2)/.zcode/workspace/default/pc_host/data/repo/zccbbc30/20261006_224806_bf_hrpp.json",
+      "bytes": 5431,
+      "sha256": "0b1c89f3987a97dfb3a06abbb3f3619ac46aac07bd8eb8db6a362eb5818596b6"
+    },
+    {
+      "path": "../新建文件夹 (2)/.zcode/workspace/default/pc_host/data/repo/zccbbc30/20261006_224854_dumb_4suu.json",
+      "bytes": 5430,
+      "sha256": "55f5a6b512c9c72e04f34a763f29b7d615f311cf03b3d145998b8e7941e022e6"
+    },
+    {
+      "path": "../新建文件夹 (2)/.zcode/workspace/default/pc_host/data/repo/zccee58f/20261007_023744_dumb_hbfy.json",
+      "bytes": 2333,
+      "sha256": "7b7690c76fbb2b5bace7612064d11ea512fb9c0e6850a5a432a19b2fc388f307"
+    }
+  ]
+}

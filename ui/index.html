@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>北极星记忆仓库</title>
+<style>
+  :root{
+    --bg:#0f1216; --panel:#171c22; --panel2:#1d242c; --line:#2a333d;
+    --text:#e6edf3; --muted:#8b98a5; --accent:#4da3ff; --accent2:#7c5cff;
+    --ok:#3fb950; --warn:#d29922; --danger:#f85149; --amber:#e3b341;
+    --radius:12px;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font:14px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",sans-serif}
+  a{color:var(--accent);text-decoration:none}
+  header{position:sticky;top:0;z-index:10;background:rgba(15,18,22,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+  .bar{max-width:1080px;margin:0 auto;padding:12px 20px;display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+  .brand{font-weight:700;font-size:16px;letter-spacing:.5px}
+  .brand span{color:var(--accent)}
+  .chips{display:flex;gap:8px;flex-wrap:wrap}
+  .chip{background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:2px 10px;font-size:12px;color:var(--muted)}
+  .chip b{color:var(--text);font-weight:600}
+  .search{flex:1;min-width:180px;position:relative}
+  .search input{width:100%;background:var(--panel);border:1px solid var(--line);border-radius:8px;color:var(--text);padding:7px 12px;outline:none}
+  .search input:focus{border-color:var(--accent)}
+  nav{display:flex;gap:6px}
+  nav a{padding:6px 12px;border-radius:8px;color:var(--muted);font-size:13px}
+  nav a.on{background:var(--panel2);color:var(--text)}
+  main{max-width:1080px;margin:0 auto;padding:20px 20px 80px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;cursor:pointer;transition:border-color .15s,transform .15s}
+  .card:hover{border-color:var(--accent);transform:translateY(-1px)}
+  .card h3{margin:0 0 6px;font-size:15px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .meta{color:var(--muted);font-size:12px;display:flex;gap:10px;flex-wrap:wrap}
+  .badge{display:inline-block;border-radius:6px;padding:0 6px;font-size:11px;line-height:18px;border:1px solid var(--line);color:var(--muted)}
+  .badge.ok{color:var(--ok);border-color:rgba(63,185,80,.4)}
+  .badge.warn{color:var(--warn);border-color:rgba(210,153,34,.4)}
+  .badge.deg{color:var(--amber);border-color:rgba(227,179,65,.4)}
+  .badge.range{color:var(--accent2);border-color:rgba(124,92,255,.45)}
+  .badge.gap{color:var(--danger);border-color:rgba(248,81,73,.4)}
+  .srow{display:flex;gap:8px;font-size:13px;padding:2px 0;border-bottom:1px dashed rgba(42,51,61,.5)}
+  .srow:last-child{border-bottom:none}
+  .srow .k{color:var(--muted);flex:0 0 44px}
+  .srow .v{flex:1;white-space:pre-wrap;word-break:break-word}
+  .srow .v.empty{color:#5b6672}
+  .srow.hl .v{color:var(--accent)}
+  .dot{width:7px;height:7px;border-radius:50%;display:inline-block;background:var(--accent)}
+  .pager{display:flex;gap:8px;align-items:center;justify-content:center;margin:22px 0;color:var(--muted);font-size:13px}
+  .pager button{background:var(--panel);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:5px 12px;cursor:pointer}
+  .pager button:disabled{opacity:.35;cursor:default}
+  .btn{background:var(--panel2);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:7px 14px;cursor:pointer;font-size:13px}
+  .btn:hover{border-color:var(--accent)}
+  .btn.primary{background:var(--accent);border-color:var(--accent);color:#07111f;font-weight:600}
+  .btn.danger{color:var(--danger);border-color:rgba(248,81,73,.5)}
+  .btn.ghost{background:transparent}
+  .toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:0 0 16px}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:18px}
+  .field{margin-bottom:12px}
+  .field label{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--muted);margin-bottom:4px}
+  .field textarea,.field input,.field select{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:8px;color:var(--text);padding:8px 10px;font:13px/1.5 inherit;resize:vertical;outline:none}
+  .field textarea:focus,.field input:focus{border-color:var(--accent)}
+  .field textarea.missing{border-color:var(--amber);box-shadow:0 0 0 1px rgba(227,179,65,.25)}
+  .field .hint{font-size:11px;color:var(--amber)}
+  .raw-area{width:100%;min-height:120px;background:var(--bg);border:1px solid var(--line);border-radius:8px;color:var(--muted);padding:10px;font:12px/1.5 ui-monospace,Consolas,monospace}
+  details summary{cursor:pointer;color:var(--muted);font-size:13px;margin:6px 0}
+  .empty-state{text-align:center;color:var(--muted);padding:60px 0}
+  .toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%);background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 18px;font-size:13px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:50;max-width:80vw}
+  .toast.show{opacity:1}
+  .grid-split{display:grid;grid-template-columns:1fr;gap:16px}
+  @media(min-width:860px){.grid-split{grid-template-columns:2fr 1fr}}
+  .kbd{font:11px ui-monospace,Consolas,monospace;background:var(--panel2);border:1px solid var(--line);border-radius:4px;padding:0 4px;color:var(--muted)}
+  .timeline{display:flex;flex-direction:column;gap:14px}
+  .gapcard{border:1px dashed rgba(248,81,73,.5);border-radius:var(--radius);padding:10px 14px;color:var(--danger);font-size:13px;background:rgba(248,81,73,.05)}
+  .rangecard{border-left:3px solid var(--accent2)}
+  .turnhead{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+  .actions{display:flex;gap:6px;flex-wrap:wrap}
+  .danger-zone{border-top:1px solid var(--line);margin-top:16px;padding-top:14px;display:flex;gap:10px;justify-content:flex-end}
+  .trash-item{display:flex;justify-content:space-between;gap:12px;align-items:center;border-bottom:1px solid var(--line);padding:12px 0}
+  .trash-item:last-child{border-bottom:none}
+  .small{font-size:12px;color:var(--muted)}
+  .hidden{display:none!important}
+</style>
+</head>
+<body>
+<header>
+  <div class="bar">
+    <div class="brand">北极星<span>记忆仓库</span></div>
+    <div class="chips" id="chips"></div>
+    <div class="search"><input id="q" placeholder="检索历史记忆…（回车）" autocomplete="off"></div>
+    <nav>
+      <a href="#/sessions" id="nav-sessions">会话</a>
+      <a href="#/trash" id="nav-trash">回收站</a>
+    </nav>
+  </div>
+</header>
+<main id="app"></main>
+<div class="toast" id="toast"></div>
+<script>
+"use strict";
+const $ = s => document.querySelector(s);
+const FIELDS = ["时间","地点","人物","事情","原因","结果","重点"];
+const app = $("#app");
+let state = { sessions: [], stats: null, session: null, records: [], detail: null, trash: [], q: "" };
+let pageState = { key: "", page: 1 };
+let pendingDelete = { id: "", until: 0 };
+
+function esc(s){ return String(s==null?"":s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+function fmt(ts){ if(!ts) return "—"; const d=new Date(ts); const p=n=>("0"+n).slice(-2); return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`; }
+function qbadge(q){ return q==="complete" ? '<span class="badge ok">完整</span>' : q==="partial" ? '<span class="badge warn">部分</span>' : '<span class="badge deg">骨架</span>'; }
+function toast(msg, ms=2200){ const t=$("#toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove("show"), ms); }
+
+async function apiGet(url){
+  const r = await fetch(url, {headers:{"Accept":"application/json"}});
+  const j = await r.json();
+  if(!j.ok && j.error) throw new Error(j.error);
+  return j;
+}
+async function apiPost(url, body){
+  const r = await fetch(url, {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body||{})});
+  const j = await r.json();
+  if(!r.ok || !j.ok) throw new Error((j&&j.error)||("HTTP "+r.status));
+  return j;
+}
+
+function setNav(name){
+  document.querySelectorAll("nav a").forEach(a=>a.classList.remove("on"));
+  const el = document.getElementById("nav-"+name); if(el) el.classList.add("on");
+}
+
+async function loadStats(){
+  try{
+    state.stats = await apiGet("/api/stats");
+    $("#chips").innerHTML = [
+      `<span class="chip">总记忆 <b>${state.stats.total}</b></span>`,
+      `<span class="chip">会话 <b>${state.stats.sessions}</b></span>`,
+      `<span class="chip">不完整 <b>${state.stats.incomplete}</b></span>`
+    ].join("");
+  }catch(e){ /* 统计失败不阻塞页面 */ }
+}
+
+async function route(){
+  await loadStats();
+  const h = location.hash || "#/sessions";
+  if(h.startsWith("#/s/")){ setNav("sessions"); return renderSession(decodeURIComponent(h.slice(4))); }
+  if(h.startsWith("#/r/")){ setNav("sessions"); return renderDetail(decodeURIComponent(h.slice(4))); }
+  if(h.startsWith("#/q/")){ setNav("sessions"); return renderSearch(decodeURIComponent(h.slice(4))); }
+  if(h==="#/trash"){ setNav("trash"); return renderTrash(); }
+  setNav("sessions"); return renderSessions();
+}
+
+function cardHtml(rec){
+  const rows = FIELDS.map(k=>{
+    const v = (rec.fields&&rec.fields[k])||"";
+    const empty = !v.trim();
+    return `<div class="srow ${k==="重点"?"hl":""}"><span class="k">${k}</span><span class="v ${empty?"empty":""}">${empty?"—":esc(v)}</span></div>`;
+  }).join("");
+  const title = rec.title || (rec.fields&&rec.fields["事情"]) || "(未命名)";
+  return `
+  <div class="card ${rec.kind==="range"?"rangecard":""}" onclick="location.hash='#/r/${encodeURIComponent(rec.id)}'">
+    <div class="turnhead">
+      <h3>${rec.kind==="range"?"Σ ":"#"+rec.turn_no+" · "}${esc(title)}</h3>
+      <div class="actions">${qbadge(rec.quality)}${rec.truncated?'<span class="badge gap">截断</span>':""}</div>
+    </div>
+    <div class="meta">
+      <span>${fmt(rec.created_at)}</span>
+      ${rec.kind==="range"?`<span class="badge range">范围 ${rec.range?rec.range.from:"?"}-${rec.range?rec.range.to:"?"}${rec.auto?" · 自动":""}</span>`:""}
+      <span>r${rec.revision}</span>
+      ${rec.tags&&rec.tags.length?`<span>${rec.tags.map(t=>"#"+esc(t)).join(" ")}</span>`:""}
+    </div>
+    <div style="margin-top:8px">${rows}</div>
+  </div>`;
+}
+
+async function renderSessions(){
+  app.innerHTML = '<div class="empty-state">加载中…</div>';
+  const j = await apiGet("/api/sessions");
+  state.sessions = j.sessions || [];
+  if(!state.sessions.length){ app.innerHTML = '<div class="empty-state">还没有记忆。让 Agent 在对话轮末调用 memory_save 即可开始。</div>'; return; }
+  app.innerHTML = `<div class="grid">${state.sessions.map(s=>`
+    <div class="card" onclick="location.hash='#/s/${encodeURIComponent(s.session_key)}'">
+      <h3>${esc(s.name||s.session_key)}</h3>
+      <div class="meta">
+        <span>${s.turn_count} 轮 · ${s.range_count} 范围</span>
+        <span>${fmt(s.last_at)}</span>
+        ${s.gaps&&s.gaps.length?`<span class="badge gap">缺口 ${s.gaps.length}</span>`:'<span class="badge ok">连续</span>'}
+      </div>
+      <div class="small" style="margin-top:6px">${esc(s.session_key)} · range_every=${s.range_every}</div>
+    </div>`).join("")}</div>`;
+}
+
+function buildTimeline(records, gaps){
+  const turns = records.filter(r=>r.kind==="turn").sort((a,b)=>a.turn_no-b.turn_no);
+  const ranges = records.filter(r=>r.kind==="range").sort((a,b)=>((a.range?a.range.to:0)-(b.range?b.range.to:0)));
+  const maxTurn = turns.reduce((m,r)=>Math.max(m,r.turn_no),0);
+  const out = [];
+  const gapSet = new Set(gaps||[]);
+  for(let i=1;i<=maxTurn;i++){
+    if(gapSet.has(i)) out.push({type:"gap", turn_no:i});
+    else { const t = turns.find(x=>x.turn_no===i); if(t) out.push({type:"turn", rec:t}); else out.push({type:"gap", turn_no:i}); }
+    ranges.filter(r=>r.range&&r.range.to===i).forEach(r=>out.push({type:"range", rec:r}));
+  }
+  ranges.filter(r=>!r.range||r.range.to>maxTurn).forEach(r=>out.push({type:"range", rec:r}));
+  return out;
+}
+
+async function renderSession(key){
+  pageState.key = key; pageState.page = 1;
+  app.innerHTML = '<div class="empty-state">加载中…</div>';
+  const j = await apiGet("/api/session/"+encodeURIComponent(key));
+  state.session = j.session; state.records = j.records || [];
+  const timeline = buildTimeline(state.records, state.session.gaps);
+  renderTimelinePage(timeline, key);
+}
+
+function renderTimelinePage(timeline, key){
+  const PAGE = 20;
+  const pages = Math.max(1, Math.ceil(timeline.length/PAGE));
+  pageState.page = Math.min(pageState.page, pages);
+  const slice = timeline.slice((pageState.page-1)*PAGE, pageState.page*PAGE);
+  const items = slice.map(it=>{
+    if(it.type==="gap") return `<div class="gapcard">第 ${it.turn_no} 轮缺少总结（被截断或 Agent 未保存）——可在该会话后续轮次补记，或用 CLI 补录。</div>`;
+    return cardHtml(it.rec);
+  }).join("");
+  app.innerHTML = `
+    <div class="toolbar">
+      <button class="btn ghost" onclick="location.hash='#/sessions'">← 返回会话</button>
+      <b>${esc(state.session.name||key)}</b>
+      <span class="small">${state.session.turn_count} 轮 · ${state.session.range_count} 范围 · ${esc(key)}</span>
+      ${state.session.gaps&&state.session.gaps.length?`<span class="badge gap">缺口：${state.session.gaps.join(",")}</span>`:""}
+      <button class="btn" onclick="renameSession()">重命名会话</button>
+    </div>
+    <div class="timeline">${items||'<div class="empty-state">该会话暂无记录</div>'}</div>
+    ${pages>1?`<div class="pager">
+      <button ${pageState.page<=1?"disabled":""} onclick="gotoPage('${esc(key)}',${pageState.page-1})">‹ 上一页</button>
+      <span>第 ${pageState.page}/${pages} 页 · 共 ${timeline.length} 条</span>
+      <button ${pageState.page>=pages?"disabled":""} onclick="gotoPage('${esc(key)}',${pageState.page+1})">下一页 ›</button>
+    </div>`:""}
+  `;
+  window.__timeline = timeline;
+}
+
+function gotoPage(key, page){
+  pageState.page = page;
+  const timeline = window.__timeline || [];
+  renderTimelinePage(timeline, key);
+  window.scrollTo({top:0,behavior:"smooth"});
+}
+
+async function renameSession(){
+  const name = prompt("会话名称：", state.session.name||"");
+  if(name==null) return;
+  try{ await apiPost("/api/rename",{session_key:state.session.session_key,name}); toast("已重命名"); route(); }catch(e){ toast("失败："+e.message); }
+}
+
+async function renderDetail(id){
+  app.innerHTML = '<div class="empty-state">加载中…</div>';
+  const j = await apiGet("/api/record/"+encodeURIComponent(id));
+  const rec = j.record;
+  state.detail = rec;
+  const fieldsHtml = FIELDS.map(k=>{
+    const v = (rec.fields&&rec.fields[k])||"";
+    const missing = !v.trim();
+    return `<div class="field">
+      <label><span>${k}</span><span class="hint ${missing?"":"hidden"}">（缺失）</span></label>
+      <textarea id="f-${k}" rows="${k==="事情"||k==="结果"?"3":"2"}" class="${missing?"missing":""}">${esc(v)}</textarea>
+      <div style="text-align:right"><button class="btn ghost" style="padding:2px 8px;font-size:11px" onclick="fillNone('f-${k}')">填无</button></div>
+    </div>`;
+  }).join("");
+  app.innerHTML = `
+  <div class="toolbar">
+    <button class="btn ghost" onclick="history.back()">← 返回</button>
+    <b>${rec.kind==="range"?"范围 · "+rec.range.from+"-"+rec.range.to:"第 "+rec.turn_no+" 轮"}</b>
+    ${qbadge(rec.quality)}
+    <span class="small">${esc(rec.session_key)} · ${fmt(rec.created_at)} · r${rec.revision}</span>
+    ${rec.truncated?'<span class="badge gap">截断轮</span>':""}
+  </div>
+  <div class="grid-split">
+    <div class="panel">
+      <div class="toolbar" style="margin-bottom:10px"><b>七字段结构化编辑</b><span class="small">保存冲突时以 revision 校验（乐观锁）</span></div>
+      ${fieldsHtml}
+      <div class="field">
+        <label>标签（逗号分隔）</label>
+        <input id="f-tags" value="${esc((rec.tags||[]).join(","))}">
+      </div>
+      <div class="field">
+        <label>评级</label>
+        <select id="f-rating">${[5,4,3,2,1].map(n=>`<option value="${n}" ${(rec.rating||3)===n?"selected":""}>${n} 星</option>`).join("")}</select>
+      </div>
+      <div class="toolbar" style="margin-bottom:0">
+        <button class="btn primary" onclick="saveDetail('${rec.id}')">保存编辑</button>
+        <span class="small">保存后自动保留旧版快照（可在回收站恢复）</span>
+      </div>
+    </div>
+    <div class="panel">
+      <details ${rec.raw_text?"":"open"}>
+        <summary>原文（raw_text，可编辑；仅本地，不参与注入）</summary>
+        <textarea id="f-raw" class="raw-area" rows="12">${esc(rec.raw_text||"")}</textarea>
+      </details>
+      <div class="small" style="margin-top:10px">质量：${rec.quality} · 缺失：${(rec.missing&&rec.missing.length)?rec.missing.join("、"):"无"}${rec.raw_truncated?" · 原文已截断窗口":""}</div>
+      <div class="small">id：${esc(rec.id)}</div>
+      <div class="danger-zone">
+        <button class="btn danger" id="del-btn" onclick="delRecord('${rec.id}')">删除（进回收站）</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function fillNone(id){ const el=document.getElementById(id); if(el){ el.value="无"; el.classList.remove("missing"); } }
+
+async function saveDetail(id){
+  const rec = state.detail;
+  const fields = {};
+  FIELDS.forEach(k=>{ const el=document.getElementById("f-"+k); if(el) fields[k]=el.value.trim(); });
+  const body = {
+    id,
+    fields,
+    raw_text: (document.getElementById("f-raw")||{}).value || "",
+    tags: ((document.getElementById("f-tags")||{}).value||"").split(",").map(s=>s.trim()).filter(Boolean),
+    rating: Number((document.getElementById("f-rating")||{}).value||3),
+    expect_revision: rec.revision
+  };
+  try{
+    const j = await apiPost("/api/update", body);
+    toast("已保存 r"+j.record.revision);
+    renderDetail(id);
+  }catch(e){
+    if(String(e.message).indexOf("revision mismatch")>=0){
+      if(confirm("该记录已被其他窗口修改（revision 冲突）。仍要用当前编辑覆盖吗？")){
+        delete body.expect_revision;
+        try{ const j=await apiPost("/api/update", body); toast("已覆盖保存 r"+j.record.revision); renderDetail(id); }
+        catch(e2){ toast("保存失败："+e2.message); }
+      }
+    } else toast("保存失败："+e.message);
+  }
+}
+
+async function delRecord(id){
+  const key = "del-"+id;
+  const now = Date.now();
+  if(pendingDelete.id!==id || now>pendingDelete.until){
+    pendingDelete = {id, until: now+3000};
+    const b = document.getElementById("del-btn");
+    if(b){ b.textContent = "再点一次确认删除"; b.classList.add("danger"); }
+    toast("3 秒内再点一次确认删除");
+    return;
+  }
+  try{ await apiPost("/api/delete",{id,confirm:true}); toast("已移入回收站"); location.hash="#/sessions"; }
+  catch(e){ toast("删除失败："+e.message); }
+}
+
+async function renderSearch(q){
+  state.q = q;
+  app.innerHTML = '<div class="empty-state">检索中…</div>';
+  const j = await apiGet("/api/search?q="+encodeURIComponent(q));
+  if(!j.results.length){ app.innerHTML = `<div class="empty-state">没有匹配「${esc(q)}」的记忆。</div>`; return; }
+  app.innerHTML = `<div class="toolbar"><b>检索：${esc(q)}</b><span class="small">${j.total} 条命中，显示前 ${j.results.length} 条</span></div>
+  <div class="timeline">${j.results.map(r=>`
+    <div class="card" onclick="location.hash='#/r/${encodeURIComponent(r.id)}'">
+      <div class="turnhead"><h3>${r.kind==="range"?"Σ ":"#"+r.turn_no+" · "}${esc(r.title)}</h3><span class="badge">${r.score}</span></div>
+      <div class="meta"><span>${esc(r.session_key)}</span><span>${fmt(r.created_at)}</span></div>
+      <div class="small" style="margin-top:6px">${esc(r.excerpt)}</div>
+    </div>`).join("")}</div>`;
+}
+
+async function renderTrash(){
+  app.innerHTML = '<div class="empty-state">加载中…</div>';
+  const j = await apiGet("/api/trash");
+  state.trash = j.items || [];
+  if(!state.trash.length){ app.innerHTML = '<div class="empty-state">回收站是空的。</div>'; return; }
+  app.innerHTML = `<div class="toolbar"><b>回收站</b><span class="small">删除的条目与编辑快照都在这里；恢复后回到原会话。</span></div>
+  <div class="panel">${state.trash.map(t=>`
+    <div class="trash-item">
+      <div>
+        <div><b>${t.record.kind==="range"?"Σ 范围":"#"+t.record.turn_no}</b> ${esc((t.record.fields&&t.record.fields["事情"])||"(无标题)")}</div>
+        <div class="small">${esc(t.record.session_key)} · 删除于 ${fmt(t.deleted_at)} · 原因 ${esc(t.reason)}</div>
+      </div>
+      <div class="actions">
+        <button class="btn" onclick="restoreTrash('${t.trash_id}')">恢复</button>
+        <button class="btn danger" onclick="purgeTrash('${t.trash_id}')">彻底删除</button>
+      </div>
+    </div>`).join("")}</div>`;
+}
+
+async function restoreTrash(id){
+  try{ await apiPost("/api/restore",{trash_id:id}); toast("已恢复"); renderTrash(); }
+  catch(e){ toast("恢复失败："+e.message); }
+}
+async function purgeTrash(id){
+  const s = prompt("彻底删除不可恢复。输入 PURGE 确认：");
+  if(s!=="PURGE") return;
+  try{ await apiPost("/api/purge",{trash_id:id}); toast("已彻底删除"); renderTrash(); }
+  catch(e){ toast("失败："+e.message); }
+}
+
+$("#q").addEventListener("keydown", e=>{
+  if(e.key==="Enter"){
+    const q = e.target.value.trim();
+    if(q) location.hash = "#/q/"+encodeURIComponent(q);
+  }
+});
+
+window.addEventListener("hashchange", route);
+route();
+</script>
+</body>
+</html>
