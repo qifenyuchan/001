@@ -134,7 +134,7 @@ npx northstar-memory --data ./demo-data
 | `non-fast-forward` | 远程已有提交；按第 2 节 B 先 pull 合并 |
 | `refusing to merge unrelated histories` | 加 `--allow-unrelated-histories` |
 | npm `403 ... Two-factor authentication or granular access token with bypass 2fa enabled is required` | npm 强制发布必须 2FA。二选一：开 2FA（验证器 App），或创建带 **Bypass 2FA** 的 Granular Access Token |
-| 2FA 二维码扫不到 / 验证器说“QR 无效” | ① 页面选的是 **Authenticator app** 而不是 Security key/Passkey；② 用页面上的 **手动密钥（setup key）** 输入；③ 换 Google/Microsoft Authenticator；④ 不要拍屏幕，直接扫或用桌面密码管理器扫描 |
+| 2FA 二维码扫不到 / 验证器说“QR 无效” | page 上是 **Security key / Passkey** 的二维码，不是 TOTP；点 Continue 用 Windows Hello，或改用手机系统 Passkey（不是验证器 App） |
 | 验证器提示“验证码错误” | 手机时间不是自动同步；打开“自动设置时间”后重试 |
 | 2FA 设置到一半想退出 | 直接关闭页面，未输入验证码前不会真正启用，不会锁号 |
 | npm `403 Forbidden`（已登录） | 包名被占用或 token 只读；换 scope 或重新登录 |
@@ -142,22 +142,39 @@ npx northstar-memory --data ./demo-data
 | CI 失败 `tsc not found` | `npm ci` 没装 devDependencies；确认不是 `--production` |
 | 提交作者是 `northstar@local` | 第 0 节没改；重写最近提交或接受 |
 
-### npm 403 的两种解法（详细）
+### npm 403 的解法（2026 现状：Security key / WebAuthn）
 
-**A. 开 2FA（推荐）**
-1. https://www.npmjs.com/settings/<用户名>/profile → Two-Factor Authentication → Enable
-2. 选择 **Authenticator app**（不是 Security key / Passkey）
-3. 扫不到二维码时，点 “Can't scan?” / 手动输入，复制 base32 密钥到 App
-4. 输入 App 生成的 6 位码完成启用
-5. `npm publish --access public`，提示时输入 6 位码
+npm 现在发布包要求 **2FA**。很多账号的 2FA 设置页**只提供 Security key（WebAuthn）**，没有“验证器 App”选项；
+如果出现二维码且提示“用手机/平板”，那是**跨设备 Passkey**，不是 TOTP，验证器 App 扫了必然报无效。
 
-**B. Granular Access Token（不想装验证器）**
-1. https://www.npmjs.com/settings/<用户名>/tokens → Generate New Token → Granular Access Token
-2. Permissions: Read and write；Packages: All packages；**勾选 Bypass 2FA**
-3. `npm config set //registry.npmjs.org/:_authToken=<令牌>`
-4. `npm publish --access public`
+**正确流程（Security key）**
+1. 2FA 设置页选 **Security key** → Continue
+2. 浏览器弹出 Windows Hello（PIN/指纹/人脸）或 Passkey 对话框：
+   - 选“此 Windows 设备 / This device” → 验证 PIN 或指纹
+   - 若只有“用手机或平板”二维码：用手机相机/系统 Passkey 扫描，**不要**用 Google Authenticator
+3. 给密钥起名（如 `My PC`）→ 保存 10 个恢复码（丢了只能靠它们找回）
+4. **必须在本机真实终端里发布**（PowerShell 窗口，不能是脚本/CI/Agent 管道）：
 
-> 令牌等于密码：不要发人、不要截图、不要提交仓库。
+```powershell
+cd "D:\北极星_turn_memory"
+npm login --auth-type=web
+npm publish --access public
+```
+
+`npm publish` 会打印：
+
+```
+Authenticate your account at: https://www.npmjs.com/auth/cli/...
+Press ENTER to open in the browser...
+```
+
+按回车 → 浏览器点 **Use security key** → 验证 Windows Hello → 终端自动继续并发布。
+
+> 关键：没有 TTY 的环境（CI、Agent、管道）会直接 `EOTP` 失败，因为 npm 无法弹浏览器。
+> 如果登录页勾选 “Do not challenge npm publish from IP for the next 5 minutes”，5 分钟内连续发版可免再次验证。
+
+**Granular token 兜底**：创建时勾 **Bypass 2FA**、权限 Read and write。
+但注意 npm 自 2026-08 起收紧了 bypass 令牌对敏感操作的豁免，能否发布以实际结果为准；不行就回到 Security key。
 
 **实在搞不定**：先跳过 npm。GitHub 已可用（Download ZIP 或 `git clone`），npm 只是把安装简化成 `npx`，不影响别人使用。
 
