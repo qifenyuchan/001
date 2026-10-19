@@ -243,6 +243,27 @@
 - 功能词频（描述级，README 未计入）：语义/向量检索 42%、MCP 34%、知识图谱 15%、记忆类型 15%、本地优先 15%、巩固/反思 14%、遗忘/TTL 13%、安全/投毒 5%、结构化字段 4%、时间有效性 3%、冲突 2%
 - 明细与 Top 100：[RESEARCH-GITHUB.md](RESEARCH-GITHUB.md)
 
+## 9.6 相邻领域零件库（2026-10-20）
+
+搜“memory”只会撞进同温层。第三轮换路子：**不搜记忆，搜 9 个相邻领域**（检索/索引、数据/版本、结构/实体、认知/生命周期、权限/安全、运维、本地模型、个性化、便携/标准），问的是「这东西拆开能不能装在记忆上」。
+
+- 规模：22 组非记忆关键词 → 1037 个去重仓库 → **186 个含记忆信号**，其中 **130 个是上一份 693 里没有的**
+- **最大收获在认知/生命周期**：记忆的巩固与遗忘。里面最成熟的东西不在记忆圈，在 **Anki 圈**——FSRS 有算法、有 `srs-benchmark`、有十几年百万用户行为数据打磨。另有 `memorylens-bench` 是首个专门评测 LLM 记忆衰减的 benchmark，正好补上 P0 评测 harness 缺的一块
+- **新挖出的可拆零件**：
+  - `wangfenjin/simple` —— 中文 + 拼音的 SQLite FTS5 分词器。**中文场景的前置条件**，不是优化项（FTS5 默认 unicode61 对中文无效）
+  - `asg017/sqlite-vec` —— SQLite 向量扩展，纯 C 零依赖
+  - `xtdb` —— bitemporal 双时态，直接对应记忆的「旧事实冒充新事实」
+  - `dedupeio/dedupe` —— 模糊匹配/实体归并，记忆去重的前置
+  - `alibaba/zvec` / `Stevenic/vectra` —— 本地嵌入向量库
+  - `tldrsec/prompt-injection-defenses` / `microsoft/BIPIA` —— 记忆投毒防御
+- **记忆投毒（§2.8 的升级版理解）**：RAG 被注入只让这一次答错；**记忆被注入是往长期记忆里写一条脏数据，永久生效**。一次写入，永久污染。这是记忆系统独有的、比 RAG 严重得多的攻击面
+- **技术栈已趋同**：提到存储的记忆项目里，显式用 SQLite 的那批几乎都配 FTS5。**这已是及格线，不再构成差异化**
+- **两个负结果（已验证，不再投入）**：
+  - 个性化推荐 / 用户画像 —— 与记忆看着像，实际技术栈零重叠。它要统计意义上的相似，记忆要个体意义上的精确
+  - Solid POD —— 生态已死（最高 45 star）。**理念对但路径错：便携性该靠人可读的文件格式实现，不该靠标准协议**
+- 新增 P1 动作（本报告的 §7 有完整清单）：FTS5 侧车索引 + 中文分词、`valid_from/valid_to/superseded_by`、三个衰减派生量（**不落盘**）、`memory_consolidate`、`source` 来源标记、写入侧注入特征检测（**标记而非拒绝**）
+- 明细与零件映射：[RESEARCH-ADJACENT.md](RESEARCH-ADJACENT.md)
+
 ## 10. 参考来源（节选）
 
 - O-mega, *AI Agent Memory in 2026: Architectures & Tools* — https://o-mega.ai/articles/ai-agent-memory-in-2026-architectures-tools

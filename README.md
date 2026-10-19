@@ -214,6 +214,7 @@ npm run build   # TypeScript 构建（仅开发需要；dist/ 已随包提供）
 
 - [AI 记忆全景调研（2026-10）](docs/RESEARCH.md)：竞品矩阵、研究共识、功能优先级
 - [GitHub 生态扫描](docs/RESEARCH-GITHUB.md)：693 个相关仓库、功能词频、偏门项目
+- [相邻领域零件库](docs/RESEARCH-ADJACENT.md)：1037 个非记忆项目的「零件 → 记忆用途」映射
 - [Agent 协议](docs/AGENTS.md) · [压缩版 Skill](docs/SKILL.md)
 - [宿主接入](docs/HOSTS.md) · [数据格式](docs/DATA_FORMAT.md)
 - [多设备同步](docs/REMOTE.md) · [压力实测](docs/LOAD.md)
