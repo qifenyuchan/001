@@ -128,6 +128,7 @@ export interface SaveResult {
 export interface ListQuery {
   session_key?: string;
   kind?: RecordKind;
+  quality?: "incomplete";
   page?: number;
   page_size?: number;
   include_degraded?: boolean;

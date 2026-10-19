@@ -3,7 +3,7 @@ import { SEVEN_FIELD_KEYS } from "../core/types.js";
 import { parseSevenFields } from "../core/parse.js";
 import { safeSlice, truncateWindow } from "../core/text.js";
 import { deriveTags } from "../core/title.js";
-import { genId, normTags, sanitizeKey, today } from "../core/util.js";
+import { genId, normTags, sanitizeKey, today, isSafeId } from "../core/util.js";
 import { NorthstarError } from "../core/types.js";
 const ALIASES = {
     时间: "时间", time: "时间", date: "时间", when: "时间",
@@ -121,7 +121,12 @@ export function buildTurn(input, opts, existing) {
     const rawIn = String(input.raw_text ?? "");
     const { text: rawText, truncated: rawTruncated } = windowRaw(rawIn, opts.rawHead, opts.rawTail);
     let qualityHint;
-    const hasAnyField = SEVEN_FIELD_KEYS.some(k => (fields[k] || "").trim());
+    let hasAnyField = SEVEN_FIELD_KEYS.some(k => (fields[k] || "").trim());
+    // P1-3：已有记录只重存 raw（截断兜底）时，保留原七字段，不能用骨架覆盖
+    if (!hasAnyField && existing && !(input.content && String(input.content).trim())) {
+        fields = { ...existing.fields };
+        hasAnyField = SEVEN_FIELD_KEYS.some(k => (fields[k] || "").trim());
+    }
     if (!hasAnyField && rawText.trim()) {
         fields = buildSkeleton(rawText, opts.nowMs);
         qualityHint = "degraded";
@@ -132,6 +137,10 @@ export function buildTurn(input, opts, existing) {
     const ratingRaw = Number(input.rating);
     const rating = isFinite(ratingRaw) ? Math.max(1, Math.min(5, Math.floor(ratingRaw))) : 3;
     const now = opts.nowMs;
+    const turnNo = existing ? existing.turn_no : Number(input.turn_no) || 1;
+    if (!Number.isSafeInteger(turnNo) || turnNo < 1 || turnNo > 1000000) {
+        throw new NorthstarError("INVALID_ARG", `turn_no must be an integer in [1, 1000000], got ${input.turn_no}`);
+    }
     // 字段级同步元数据：仅记录发生变化的字段，冲突合并时按 ts/by 决胜
     const fieldMeta = { ...(existing && existing.field_meta ? existing.field_meta : {}) };
     for (const k of SEVEN_FIELD_KEYS) {
@@ -148,7 +157,7 @@ export function buildTurn(input, opts, existing) {
         space_id: existing ? existing.space_id : opts.spaceId,
         session_id: sessionId,
         session_key: sessionKey,
-        turn_no: existing ? existing.turn_no : Number(input.turn_no) || 1,
+        turn_no: turnNo,
         created_at: existing ? existing.created_at : now,
         updated_at: now,
         revision: existing ? existing.revision + 1 : 1,
@@ -195,9 +204,48 @@ export function ensureRecordShape(value) {
     const v = value;
     if (!v || typeof v !== "object")
         return null;
-    if (v.schema !== 1 || !v.id || !v.session_key || !v.fields || (v.kind !== "turn" && v.kind !== "range"))
+    if (v.schema !== 1 || !v.fields || (v.kind !== "turn" && v.kind !== "range"))
         return null;
-    return v;
+    if (!isSafeId(v.id) || !isSafeId(v.session_key))
+        return null;
+    const turnNo = Number(v.turn_no);
+    if (!Number.isSafeInteger(turnNo) || turnNo < 1 || turnNo > 1000000)
+        return null;
+    // 类型归一：手工修改/同步冲突可能带来脏类型，归一后再进内存
+    const fields = blankFields();
+    for (const k of SEVEN_FIELD_KEYS) {
+        const fv = v.fields[k];
+        fields[k] = fv == null ? "" : String(fv);
+    }
+    const rec = v;
+    rec.fields = fields;
+    rec.turn_no = turnNo;
+    rec.revision = Number.isSafeInteger(Number(rec.revision)) && Number(rec.revision) >= 1 ? Number(rec.revision) : 1;
+    rec.tags = Array.isArray(rec.tags) ? rec.tags.map(x => String(x)).slice(0, 8) : [];
+    rec.raw_text = rec.raw_text == null ? "" : String(rec.raw_text);
+    rec.created_at = Number.isFinite(Number(rec.created_at)) ? Number(rec.created_at) : Date.now();
+    rec.updated_at = Number.isFinite(Number(rec.updated_at)) ? Number(rec.updated_at) : rec.created_at;
+    rec.updated_by = rec.updated_by ? String(rec.updated_by) : "legacy";
+    rec.space_id = rec.space_id ? String(rec.space_id) : "personal";
+    if (rec.kind === "range") {
+        const r = rec.range;
+        const from = Number(r && r.from);
+        const to = Number(r && r.to);
+        if (!Number.isSafeInteger(from) || !Number.isSafeInteger(to) || from < 1 || to < from || to > 1000000)
+            return null;
+        rec.range = {
+            from,
+            to,
+            covers: Array.isArray(r && r.covers) ? r.covers.map((x) => String(x)) : [],
+            unresolved: Array.isArray(r && r.unresolved) ? r.unresolved.map((x) => String(x)) : [],
+        };
+    }
+    const a = assess(fields);
+    rec.missing = a.missing;
+    rec.blank = a.blank;
+    if (!rec.quality)
+        rec.quality = a.quality;
+    return rec;
 }
 export const CANONICAL_TURN_RE = /^turn-\d{4,}\.json$/;
 export const CANONICAL_RANGE_RE = /^range-\d{4,}-\d{4,}\.json$/;

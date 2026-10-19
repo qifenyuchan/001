@@ -89,3 +89,31 @@ test("搜索端点返回命中", async () => {
     assert.ok(r.total >= 1);
   });
 });
+
+test("前端拆分：HTML 只留结构，CSS/JS 独立可缓存", async () => {
+  await withServer(async ({ base }) => {
+    const htmlRes = await fetch(base + "/");
+    const html = await htmlRes.text();
+    assert.match(html, /href="\/styles\.css"/);
+    assert.match(html, /src="\/app\.js"/);
+    assert.ok(!html.includes("<style"), "不应再有内联 style");
+    assert.ok(!/<script>\s*[^<]/.test(html), "不应再有内联脚本");
+    assert.match(html, /viewport/);
+
+    const cssRes = await fetch(base + "/styles.css");
+    assert.equal(cssRes.status, 200);
+    assert.match(cssRes.headers.get("content-type") || "", /text\/css/);
+    const css = await cssRes.text();
+    assert.match(css, /@media \(max-width:959px\)/, "侧栏断点");
+    assert.match(css, /@media \(max-width:759px\)/, "抽屉全屏断点");
+    assert.match(css, /overflow-wrap:anywhere/, "长文本防溢出");
+    assert.match(css, /resize-handle/, "吸附手柄样式");
+
+    const jsRes = await fetch(base + "/app.js");
+    assert.equal(jsRes.status, 200);
+    assert.match(jsRes.headers.get("content-type") || "", /javascript/);
+    const js = await jsRes.text();
+    assert.match(js, /initPanelResize/, "面板拖拽吸附");
+    assert.match(js, /PANEL_SNAPS/, "吸附档位");
+  });
+});

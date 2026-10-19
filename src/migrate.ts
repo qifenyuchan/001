@@ -248,20 +248,33 @@ function backup(): string | null {
   return dest;
 }
 
-function apply(): number {
+function apply(): { written: number; skipped: number } {
   let written = 0;
+  let skipped = 0;
   const sessionDirOf = (key: string) => path.join(config.dataDir, "spaces", "personal", "sessions", key);
   for (const m of metaList) {
-    ensureDir(sessionDirOf(m.session_key));
-    atomicWriteJson(path.join(sessionDirOf(m.session_key), "_meta.json"), m);
+    const dir = sessionDirOf(m.session_key);
+    ensureDir(dir);
+    const metaFile = path.join(dir, "_meta.json");
+    if (fs.existsSync(metaFile)) {
+      // P1-9：已有会话名不覆盖，尤其是用户手动改过的
+      skipped++;
+      continue;
+    }
+    atomicWriteJson(metaFile, m);
   }
   for (const p of plan) {
     const dir = sessionDirOf(p.key);
     ensureDir(dir);
-    atomicWriteJson(path.join(dir, recordFileName(p.record)), p.record);
+    const target = path.join(dir, recordFileName(p.record));
+    if (fs.existsSync(target)) {
+      skipped++;
+      continue;
+    }
+    atomicWriteJson(target, p.record);
     written++;
   }
-  return written;
+  return { written, skipped };
 }
 
 function verify(): { ok: boolean; total: number; turns: number; ranges: number; names: number; missing_reason: number; sha_mismatch: number; duplicate: number } {
@@ -332,7 +345,9 @@ const report: Record<string, any> = {
 if (isApply) {
   const b = backup();
   report.backup = b;
-  report.written = apply();
+  const res = apply();
+  report.written = res.written;
+  report.skipped = res.skipped;
   report.verify = verify();
 }
 

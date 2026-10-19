@@ -6,10 +6,32 @@ import { NorthstarError, SEVEN_FIELD_KEYS } from "../core/types.js";
 import { assess, buildRange, buildTurn, ensureRecordShape, isConflictCandidate, partialFields, recordFileName, } from "./schema.js";
 import { fieldsToContent } from "./schema.js";
 import { atomicWriteJson, ensureDir, listDirs, listFiles, readJson, revStamp, touchRev, withLock } from "./files.js";
-import { clampInt, sanitizeKey, normTags } from "../core/util.js";
+import { clampInt, sanitizeKey, normTags, isSafeId } from "../core/util.js";
 import { logWarn } from "../log.js";
 import { truncateWindow } from "../core/text.js";
 import { getDeviceId } from "../device.js";
+// 缺口计算：排序后按相邻差生成，带 cap，避免 turn_no=1e9 时线性遍历
+function computeGaps(turns, cap = 500) {
+    const nums = turns.map(t => t.turn_no).sort((a, b) => a - b);
+    const gaps = [];
+    let count = 0;
+    let prev = 0;
+    for (const n of nums) {
+        if (n - prev > 1) {
+            count += n - prev - 1;
+            for (let i = prev + 1; i < n && gaps.length < cap; i++)
+                gaps.push(i);
+        }
+        prev = Math.max(prev, n);
+    }
+    return { gaps, count };
+}
+function assertTrashId(v) {
+    const id = String(v || "");
+    if (!isSafeId(id))
+        throw new NorthstarError("INVALID_ARG", "invalid trash_id");
+    return id;
+}
 export class RepoStore {
     dataDir;
     spaceId;
@@ -93,6 +115,21 @@ export class RepoStore {
         return path.join(this.sessionsDir, key);
     }
     loadSession(key) {
+        if (!/^[a-z0-9_-]{1,64}$/.test(key)) {
+            logWarn(`skip unsafe session dir name: ${key}`);
+            const now = Date.now();
+            const meta = {
+                schema: 1,
+                session_id: key,
+                session_key: key,
+                name: key,
+                name_source: "auto",
+                range_every: this.opts.rangeEvery,
+                created_at: now,
+                updated_at: now,
+            };
+            return { key, meta, dir: this.sessionDir(key), records: new Map(), rev: 0 };
+        }
         const dir = this.sessionDir(key);
         const meta = this.readMeta(key, dir);
         const records = new Map();
@@ -238,26 +275,68 @@ export class RepoStore {
             reason,
         };
         atomicWriteJson(path.join(this.trashDir, `${item.trash_id}.json`), item);
+        // 快照保留上限：只留最近 200 份，避免长期使用后无限增长
+        try {
+            const files = listFiles(this.trashDir);
+            if (files.length > 200) {
+                for (const f of files.slice(0, files.length - 200)) {
+                    try {
+                        fs.unlinkSync(path.join(this.trashDir, f));
+                    }
+                    catch {
+                        /* ignore */
+                    }
+                }
+            }
+        }
+        catch {
+            /* ignore */
+        }
+    }
+    scanSessionRecords(st) {
+        const out = [];
+        for (const fname of listFiles(st.dir)) {
+            if (fname === "_meta.json" || isConflictCandidate(fname))
+                continue;
+            const r = readJson(path.join(st.dir, fname));
+            if (!r.ok)
+                continue;
+            const rec = ensureRecordShape(r.value);
+            if (rec) {
+                rec.session_key = st.key;
+                out.push(rec);
+            }
+        }
+        return out;
+    }
+    withSessionLock(st, fn) {
+        return withLock(this.lockDir, st.key, fn);
     }
     upsertTurn(input) {
         this.maybeRefresh();
         const sessionId = String(input.session_id || "").trim() || "default";
         const st = this.ensureSession(sessionId);
-        const turnNo = input.turn_no && Number(input.turn_no) > 0 ? Math.floor(Number(input.turn_no)) : this.nextTurnNo(st.key);
-        const existing = this.findTurn(st, turnNo);
-        const rec = buildTurn({ ...input, session_id: sessionId, turn_no: turnNo }, {
-            nowMs: Date.now(),
-            rawHead: this.opts.rawHead,
-            rawTail: this.opts.rawTail,
-            sessionKeyOverride: st.key,
-            deviceId: this.deviceId,
-            spaceId: this.spaceId,
-        }, existing);
-        if (existing)
-            this.snapshot(st, existing, "edit");
-        withLock(this.lockDir, st.key, () => {
-            atomicWriteJson(this.fileFor(st, rec), rec);
+        let rec;
+        let created = false;
+        this.withSessionLock(st, () => {
+            // 锁内重新读盘，避免两个进程同时取到同一个 turn_no（P0-4）
+            const fresh = this.scanSessionRecords(st);
+            const turnNo = input.turn_no && Number(input.turn_no) > 0 ? Math.floor(Number(input.turn_no)) : fresh.filter(r => r.kind === "turn").reduce((m, r) => Math.max(m, r.turn_no), 0) + 1;
+            const existing = fresh.find(r => r.kind === "turn" && r.turn_no === turnNo);
+            const built = buildTurn({ ...input, session_id: sessionId, turn_no: turnNo }, {
+                nowMs: Date.now(),
+                rawHead: this.opts.rawHead,
+                rawTail: this.opts.rawTail,
+                sessionKeyOverride: st.key,
+                deviceId: this.deviceId,
+                spaceId: this.spaceId,
+            }, existing);
+            if (existing)
+                this.snapshot(st, existing, "edit");
+            atomicWriteJson(this.fileFor(st, built), built);
             touchRev(st.dir);
+            rec = built;
+            created = !existing;
         });
         st.records.set(rec.id, rec);
         this.byId.set(rec.id, rec);
@@ -275,7 +354,7 @@ export class RepoStore {
             quality: rec.quality,
             missing: rec.missing,
             range_due: rangeDue,
-            created: !existing,
+            created,
         };
     }
     upsertRange(input) {
@@ -286,24 +365,27 @@ export class RepoStore {
         const to = Math.max(from, Math.floor(Number(input.range_to) || 0));
         if (!from || !to)
             throw new NorthstarError("INVALID_ARG", "range_from and range_to are required");
-        let existing;
-        for (const r of st.records.values()) {
-            if (r.kind === "range" && r.range && r.range.from === from && r.range.to === to)
-                existing = r;
-        }
-        const rec = buildRange({ ...input, session_id: sessionId, range_from: from, range_to: to }, {
-            nowMs: Date.now(),
-            rawHead: this.opts.rawHead,
-            rawTail: this.opts.rawTail,
-            sessionKeyOverride: st.key,
-            deviceId: this.deviceId,
-            spaceId: this.spaceId,
-        }, existing);
-        if (existing)
-            this.snapshot(st, existing, "range-edit");
-        withLock(this.lockDir, st.key, () => {
-            atomicWriteJson(this.fileFor(st, rec), rec);
+        if (from > to || to > 1000000)
+            throw new NorthstarError("INVALID_ARG", "invalid range_from/range_to");
+        let rec;
+        let created = false;
+        this.withSessionLock(st, () => {
+            const fresh = this.scanSessionRecords(st);
+            const existing = fresh.find(r => r.kind === "range" && r.range && r.range.from === from && r.range.to === to);
+            const built = buildRange({ ...input, session_id: sessionId, range_from: from, range_to: to }, {
+                nowMs: Date.now(),
+                rawHead: this.opts.rawHead,
+                rawTail: this.opts.rawTail,
+                sessionKeyOverride: st.key,
+                deviceId: this.deviceId,
+                spaceId: this.spaceId,
+            }, existing);
+            if (existing)
+                this.snapshot(st, existing, "range-edit");
+            atomicWriteJson(this.fileFor(st, built), built);
             touchRev(st.dir);
+            rec = built;
+            created = !existing;
         });
         st.records.set(rec.id, rec);
         this.byId.set(rec.id, rec);
@@ -319,7 +401,7 @@ export class RepoStore {
             missing: rec.missing,
             range_due: false,
             range: rec.range,
-            created: !existing,
+            created,
         };
     }
     get(id) {
@@ -340,8 +422,8 @@ export class RepoStore {
         }
         if (query.kind)
             items = items.filter(r => r.kind === query.kind);
-        if (!query.include_degraded)
-            items = items.filter(r => r.quality !== "degraded" || r.raw_text);
+        if (query.quality === "incomplete")
+            items = items.filter(r => r.quality !== "complete");
         items.sort((a, b) => b.created_at - a.created_at);
         const total = items.length;
         const pages = Math.max(1, Math.ceil(total / pageSize));
@@ -365,11 +447,7 @@ export class RepoStore {
             const ranges = [...st.records.values()].filter(r => r.kind === "range");
             const times = [...turns, ...ranges].map(r => r.created_at);
             const maxTurn = turns.reduce((m, r) => Math.max(m, r.turn_no), 0);
-            const present = new Set(turns.map(r => r.turn_no));
-            const gaps = [];
-            for (let i = 1; i <= maxTurn; i++)
-                if (!present.has(i))
-                    gaps.push(i);
+            const gaps = computeGaps(turns).gaps;
             out.push({
                 session_key: st.key,
                 session_id: st.meta.session_id,
@@ -399,60 +477,73 @@ export class RepoStore {
         st.meta.name = clean;
         st.meta.name_source = "user";
         this.writeMeta(st);
+        touchRev(st.dir);
+        st.rev = revStamp(st.dir);
         return st.meta;
+    }
+    rangeEveryOf(sessionKey) {
+        const st = this.sessions.get(sanitizeKey(sessionKey));
+        return (st && st.meta.range_every) || this.opts.rangeEvery;
     }
     update(input) {
         this.maybeRefresh();
         const rec = this.byId.get(String(input.id || ""));
         if (!rec)
             throw new NorthstarError("NOT_FOUND", `record not found: ${input.id}`);
-        if (input.expect_revision != null && Number(input.expect_revision) !== rec.revision) {
-            throw new NorthstarError("CONFLICT", `revision mismatch: expected ${input.expect_revision}, actual ${rec.revision}`);
-        }
         const st = this.sessions.get(rec.session_key);
         if (!st)
             throw new NorthstarError("NOT_FOUND", `session not found: ${rec.session_key}`);
-        const patch = input.fields ? partialFields(input.fields) : {};
-        const mergedFields = { ...rec.fields, ...patch };
-        const now = Date.now();
-        const fieldMeta = { ...(rec.field_meta || {}) };
-        for (const k of Object.keys(patch)) {
-            if ((patch[k] || "") !== (rec.fields[k] || ""))
-                fieldMeta[k] = { ts: now, by: this.deviceId };
-        }
-        let rawText = rec.raw_text;
-        let rawTruncated = rec.raw_truncated;
-        if (input.raw_text != null) {
-            rawText = String(input.raw_text);
-            if (rawText.length > this.opts.rawHead + this.opts.rawTail + 24) {
-                rawText = truncateWindow(rawText, this.opts.rawHead, this.opts.rawTail);
-                rawTruncated = true;
+        let updated;
+        this.withSessionLock(st, () => {
+            // 锁内重读，乐观锁检查与写回原子化（P1-8）
+            const file = this.fileFor(st, rec);
+            const freshRead = readJson(file);
+            const fresh = freshRead.ok ? ensureRecordShape(freshRead.value) : null;
+            if (!fresh)
+                throw new NorthstarError("NOT_FOUND", `record file missing: ${rec.id}`);
+            if (input.expect_revision != null && Number(input.expect_revision) !== fresh.revision) {
+                throw new NorthstarError("CONFLICT", `revision mismatch: expected ${input.expect_revision}, actual ${fresh.revision}`);
             }
-            else {
-                rawTruncated = false;
+            const patch = input.fields ? partialFields(input.fields) : {};
+            const mergedFields = { ...fresh.fields, ...patch };
+            const now = Date.now();
+            const fieldMeta = { ...(fresh.field_meta || {}) };
+            for (const k of Object.keys(patch)) {
+                if ((patch[k] || "") !== (fresh.fields[k] || ""))
+                    fieldMeta[k] = { ts: now, by: this.deviceId };
             }
-            if (rawText !== rec.raw_text)
-                fieldMeta["raw_text"] = { ts: now, by: this.deviceId };
-        }
-        const a = assess(mergedFields);
-        const updated = {
-            ...rec,
-            fields: mergedFields,
-            raw_text: rawText,
-            raw_truncated: rawTruncated,
-            missing: a.missing,
-            blank: a.blank,
-            quality: a.quality,
-            tags: input.tags ? normTags(input.tags) : rec.tags,
-            rating: input.rating != null ? clampInt(input.rating, 1, 5, rec.rating || 3) : rec.rating,
-            updated_at: now,
-            updated_by: this.deviceId,
-            revision: rec.revision + 1,
-            field_meta: fieldMeta,
-        };
-        this.snapshot(st, rec, "edit");
-        withLock(this.lockDir, st.key, () => {
-            atomicWriteJson(this.fileFor(st, updated), updated);
+            let rawText = fresh.raw_text;
+            let rawTruncated = fresh.raw_truncated;
+            if (input.raw_text != null) {
+                rawText = String(input.raw_text);
+                if (rawText.length > this.opts.rawHead + this.opts.rawTail + 24) {
+                    rawText = truncateWindow(rawText, this.opts.rawHead, this.opts.rawTail);
+                    rawTruncated = true;
+                }
+                else {
+                    rawTruncated = false;
+                }
+                if (rawText !== fresh.raw_text)
+                    fieldMeta["raw_text"] = { ts: now, by: this.deviceId };
+            }
+            const a = assess(mergedFields);
+            updated = {
+                ...fresh,
+                fields: mergedFields,
+                raw_text: rawText,
+                raw_truncated: rawTruncated,
+                missing: a.missing,
+                blank: a.blank,
+                quality: a.quality,
+                tags: input.tags ? normTags(input.tags) : fresh.tags,
+                rating: input.rating != null ? clampInt(input.rating, 1, 5, fresh.rating || 3) : fresh.rating,
+                updated_at: now,
+                updated_by: this.deviceId,
+                revision: fresh.revision + 1,
+                field_meta: fieldMeta,
+            };
+            this.snapshot(st, fresh, "edit");
+            atomicWriteJson(file, updated);
             touchRev(st.dir);
         });
         st.records.set(updated.id, updated);
@@ -469,26 +560,27 @@ export class RepoStore {
         const st = this.sessions.get(rec.session_key);
         if (!st)
             throw new NorthstarError("NOT_FOUND", `session not found: ${rec.session_key}`);
-        const tomb = {
-            schema: 1,
-            id: rec.id,
-            session_key: rec.session_key,
-            deleted_at: Date.now(),
-            by: this.deviceId,
-            reason,
-            record: rec,
-        };
-        atomicWriteJson(path.join(this.tombDir, `${rec.id}.json`), tomb);
-        const file = this.fileFor(st, rec);
-        try {
-            fs.unlinkSync(file);
-        }
-        catch (e) {
-            throw new NorthstarError("IO_ERROR", `delete failed: ${e.message}`);
-        }
+        this.withSessionLock(st, () => {
+            const tomb = {
+                schema: 1,
+                id: rec.id,
+                session_key: rec.session_key,
+                deleted_at: Date.now(),
+                by: this.deviceId,
+                reason,
+                record: rec,
+            };
+            atomicWriteJson(path.join(this.tombDir, `${rec.id}.json`), tomb);
+            try {
+                fs.unlinkSync(this.fileFor(st, rec));
+            }
+            catch (e) {
+                throw new NorthstarError("IO_ERROR", `delete failed: ${e.message}`);
+            }
+            touchRev(st.dir);
+        });
         st.records.delete(rec.id);
         this.byId.delete(rec.id);
-        touchRev(st.dir);
         st.rev = revStamp(st.dir);
         return { ok: true, trash_id: rec.id };
     }
@@ -665,17 +757,21 @@ export class RepoStore {
     }
     restore(trashId) {
         this.maybeRefresh();
-        const id = String(trashId || "");
+        const id = assertTrashId(trashId);
         const tombFile = path.join(this.tombDir, `${id}.json`);
         const tombRead = readJson(tombFile);
         if (tombRead.ok && tombRead.value && tombRead.value.record) {
-            const rec = tombRead.value.record;
+            const rec = ensureRecordShape(tombRead.value.record);
+            if (!rec)
+                throw new NorthstarError("CORRUPT_RECORD", "tombstone record is corrupted");
+            if (!/^[a-z0-9_-]{1,64}$/.test(rec.session_key))
+                throw new NorthstarError("INVALID_ARG", "invalid session key in tombstone");
             const st = this.sessions.get(rec.session_key) || this.loadSession(rec.session_key);
             const target = this.fileFor(st, rec);
             if (fs.existsSync(target))
                 throw new NorthstarError("CONFLICT", `target already exists: ${path.basename(target)}`);
             const restored = { ...rec, updated_at: Date.now(), updated_by: this.deviceId, revision: rec.revision + 1 };
-            withLock(this.lockDir, st.key, () => {
+            this.withSessionLock(st, () => {
                 atomicWriteJson(target, restored);
                 touchRev(st.dir);
             });
@@ -695,12 +791,24 @@ export class RepoStore {
         if (!r.ok || !r.value || !r.value.record)
             throw new NorthstarError("NOT_FOUND", `trash item not found: ${trashId}`);
         const rec = r.value.record;
+        if (!/^[a-z0-9_-]{1,64}$/.test(rec.session_key))
+            throw new NorthstarError("INVALID_ARG", "invalid session key in trash item");
         const st = this.sessions.get(rec.session_key) || this.loadSession(rec.session_key);
         const target = this.fileFor(st, rec);
-        if (fs.existsSync(target))
-            throw new NorthstarError("CONFLICT", `target already exists: ${path.basename(target)}`);
-        const restored = { ...rec, updated_at: Date.now(), updated_by: this.deviceId, revision: rec.revision + 1 };
-        withLock(this.lockDir, st.key, () => {
+        // P1-1：编辑快照恢复 = 用快照覆盖当前版本（先快照当前，再写回，revision 递增）
+        let restored;
+        this.withSessionLock(st, () => {
+            const currentRead = fs.existsSync(target) ? readJson(target) : { ok: false };
+            const current = currentRead.ok ? ensureRecordShape(currentRead.value) : null;
+            if (current)
+                this.snapshot(st, current, "edit");
+            const baseRevision = current ? current.revision : rec.revision;
+            restored = {
+                ...rec,
+                updated_at: Date.now(),
+                updated_by: this.deviceId,
+                revision: baseRevision + 1,
+            };
             atomicWriteJson(target, restored);
             touchRev(st.dir);
         });
@@ -716,7 +824,7 @@ export class RepoStore {
         return restored;
     }
     purge(trashId) {
-        const id = String(trashId || "");
+        const id = assertTrashId(trashId);
         const tombFile = path.join(this.tombDir, `${id}.json`);
         if (fs.existsSync(tombFile)) {
             fs.unlinkSync(tombFile);
@@ -754,14 +862,7 @@ export class RepoStore {
         const st = this.sessions.get(key);
         if (!st)
             return [];
-        const turns = [...st.records.values()].filter(r => r.kind === "turn");
-        const max = turns.reduce((m, r) => Math.max(m, r.turn_no), 0);
-        const present = new Set(turns.map(r => r.turn_no));
-        const gaps = [];
-        for (let i = 1; i <= max; i++)
-            if (!present.has(i))
-                gaps.push(i);
-        return gaps;
+        return computeGaps([...st.records.values()].filter(r => r.kind === "turn")).gaps;
     }
     stats() {
         this.maybeRefresh();
@@ -775,9 +876,10 @@ export class RepoStore {
         let sessions = 0;
         let gaps = 0;
         for (const st of this.sessions.values()) {
-            if ([...st.records.values()].some(r => r.kind === "turn"))
+            const turns = [...st.records.values()].filter(r => r.kind === "turn");
+            if (turns.length)
                 sessions++;
-            gaps += this.gapsFor(st.key).length;
+            gaps += computeGaps(turns).count;
         }
         const tombstones = listFiles(this.tombDir).length;
         const conflicts = listFiles(this.conflictDir).filter(f => f.endsWith(".report.json")).length;

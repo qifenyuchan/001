@@ -1,6 +1,6 @@
 // inject.ts — 上一轮注入块（严格 1 条 + 预算裁剪；绝不注入全量历史）
 import { safeSlice } from "../core/text.js";
-import { fmtDateTime } from "../core/util.js";
+import { fmtDateTime, sanitizeKey } from "../core/util.js";
 const QUALITY_LABEL = {
     complete: "完整",
     partial: "部分",
@@ -54,11 +54,15 @@ export function formatRangeBlock(rec, maxChars) {
     return text.length > maxChars ? safeSlice(text, maxChars - 18) + "\n（已截断，完整内容用 memory_get）" : text;
 }
 export function recall(repo, query, maxChars) {
-    const key = query.session_key || query.session_id || "default";
+    const rawKey = String(query.session_key || query.session_id || "").trim();
+    const key = sanitizeKey(rawKey);
     if (query.scope === "range") {
+        if (!rawKey) {
+            return { ok: true, found: false, text: "（未指定会话，无法取范围总结）", next_turn_no: 1, gap: false, reason: "no-session" };
+        }
         const ranges = repo
             .all()
-            .filter(r => r.kind === "range" && (r.session_key === key || key === "default") && (!query.before_turn_no || (r.range ? r.range.to <= query.before_turn_no : true)))
+            .filter(r => r.kind === "range" && r.session_key === key && (!query.before_turn_no || (r.range ? r.range.to <= query.before_turn_no : true)))
             .sort((a, b) => b.created_at - a.created_at);
         const latest = ranges[0];
         const next = repo.nextTurnNo(key);
@@ -79,11 +83,14 @@ export function recall(repo, query, maxChars) {
         };
     }
     const gaps = repo.gapsFor(key);
-    let text = formatTurnBlock(prev.record, maxChars);
     const gap = prev.gap || gaps.length > 0;
-    if (gap) {
-        const detail = gaps.length ? `第${gaps.slice(0, 8).join("、")}轮` : `第${prev.record.turn_no + 1}轮之后的轮次`;
-        text += `\n（注意：${detail}缺少总结，可让用户补记或用 memory_search 检索历史）`;
-    }
+    const hint = gap
+        ? `\n（注意：${gaps.length ? `第${gaps.slice(0, 8).join("、")}轮` : `第${prev.record.turn_no + 1}轮之后的轮次`}缺少总结，可让用户补记或用 memory_search 检索历史）`
+        : "";
+    // 先预留提示长度，保证最终块不超过预算（P2-1）
+    let text = formatTurnBlock(prev.record, Math.max(120, maxChars - hint.length));
+    text += hint;
+    if (text.length > maxChars)
+        text = safeSlice(text, maxChars);
     return { ok: true, found: true, text, record: prev.record, next_turn_no: prev.next_turn_no, gap };
 }

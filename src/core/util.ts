@@ -1,4 +1,5 @@
 // util.ts — 标识/标签/时间格式化等纯逻辑
+import crypto from "node:crypto";
 import { asText } from "./text.js";
 
 export function genId(): string {
@@ -7,11 +8,20 @@ export function genId(): string {
   return `tm_${ts}_${rand}`;
 }
 
-// 会话键清洗：小写、仅 [a-z0-9_-]、最长 48、空则 default
+// 会话键清洗：小写 + 仅 [a-z0-9_-]；有损清洗或截断时追加原始 id 短哈希，避免不同会话碰撞
 export function sanitizeKey(v: unknown): string {
-  const raw = asText(v).trim().toLowerCase();
-  const cleaned = raw.replace(/[^a-z0-9_-]/g, "").slice(0, 48);
-  return cleaned || "default";
+  const raw = asText(v).trim();
+  if (!raw) return "default";
+  const lower = raw.toLowerCase();
+  const cleaned = lower.replace(/[^a-z0-9_-]/g, "").slice(0, 48) || "default";
+  if (raw === lower && cleaned === lower && raw.length <= 48) return cleaned;
+  const hash = crypto.createHash("sha1").update(raw, "utf8").digest("hex").slice(0, 6);
+  return `${cleaned}-${hash}`;
+}
+
+const SAFE_ID_RE = /^[A-Za-z0-9_-]{1,100}$/;
+export function isSafeId(v: unknown): boolean {
+  return SAFE_ID_RE.test(asText(v));
 }
 
 export function normTags(v: unknown): string[] {

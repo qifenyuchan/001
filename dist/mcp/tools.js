@@ -4,6 +4,7 @@ import { recall, formatTurnBlock, formatRangeBlock } from "../features/inject.js
 import { buildAutoRange } from "../features/range.js";
 import { searchRecords } from "../features/search.js";
 import { deriveTitleFromFields } from "../core/title.js";
+import { contentToFields } from "../store/schema.js";
 const SEVEN_SCHEMA = {
     type: "object",
     description: "Seven-field summary. Keys may be Chinese (时间/地点/人物/事情/原因/结果/重点) or English aliases (time/place/people/event/cause/result/keypoint).",
@@ -139,6 +140,13 @@ export function createTools(repo, config) {
         if (!hasFields && !hasContent && !hasRaw) {
             throw new NorthstarError("EMPTY_INPUT", "nothing to save: provide fields, content or raw_text");
         }
+        // content 非七字段且无 raw：拒绝，避免落空记录（P2-11）
+        if (hasContent && !hasFields && !hasRaw) {
+            const parsed = contentToFields(String(args.content));
+            if (!Object.values(parsed).some(v => v.trim())) {
+                throw new NorthstarError("INVALID_ARG", "content is not a seven-field block; provide fields or raw_text");
+            }
+        }
         const input = {
             session_id: String(args.session_id || "").trim() || "default",
             turn_no: args.turn_no,
@@ -158,7 +166,8 @@ export function createTools(repo, config) {
         let rangeAuto;
         if (result.range_due && kind === "turn") {
             try {
-                const r = buildAutoRange(repo, result.session_key, Math.max(1, result.turn_no - (config.rangeEvery - 1)), result.turn_no);
+                const every = repo.rangeEveryOf(result.session_key);
+                const r = buildAutoRange(repo, result.session_key, Math.max(1, result.turn_no - (every - 1)), result.turn_no);
                 if (r.ok)
                     rangeAuto = { id: r.record.id, range: r.record.range };
             }
@@ -214,6 +223,7 @@ export function createTools(repo, config) {
         const r = repo.list({
             session_key: args.session_id ? String(args.session_id) : undefined,
             kind: args.kind === "range" ? "range" : args.kind === "turn" ? "turn" : undefined,
+            quality: args.quality === "incomplete" ? "incomplete" : undefined,
             page: args.page,
             page_size: args.page_size,
         });

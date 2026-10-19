@@ -78,12 +78,37 @@ function decorate(rec: MemoryRecord, sessionName?: string) {
 function hostAllowed(hostHeader: string | undefined, authToken: string): boolean {
   if (!hostHeader) return false;
   if (authToken) return true; // 有令牌时允许任意 Host（远程/域名访问）
-  const host = hostHeader.split(":")[0].toLowerCase();
-  return host === "127.0.0.1" || host === "localhost" || host === "[::1]" || host === "::1";
+  const host = hostHeader.startsWith("[") ? hostHeader.slice(0, hostHeader.indexOf("]") + 1) : hostHeader.split(":")[0];
+  const h = host.toLowerCase();
+  return h === "127.0.0.1" || h === "localhost" || h === "[::1]" || h === "::1";
+}
+
+// 同源校验：浏览器跨站 POST 会带 Origin/Sec-Fetch-Site；本地 CLI/脚本无 Origin 放行
+function sameOrigin(req: http.IncomingMessage): boolean {
+  const origin = req.headers.origin;
+  if (origin) {
+    try {
+      return new URL(origin).host === req.headers.host;
+    } catch {
+      return false;
+    }
+  }
+  const site = req.headers["sec-fetch-site"];
+  if (typeof site === "string" && site !== "same-origin" && site !== "none") return false;
+  return true;
+}
+
+function requireJson(req: http.IncomingMessage): boolean {
+  const ct = String(req.headers["content-type"] || "").toLowerCase();
+  return ct.startsWith("application/json");
 }
 
 export function createUiServer(repo: RepoStore, config: Config): http.Server {
   const htmlFile = path.join(PACKAGE_ROOT, "ui", "index.html");
+  const staticMap: Record<string, { file: string; type: string }> = {
+    "/styles.css": { file: path.join(PACKAGE_ROOT, "ui", "styles.css"), type: "text/css; charset=utf-8" },
+    "/app.js": { file: path.join(PACKAGE_ROOT, "ui", "app.js"), type: "text/javascript; charset=utf-8" },
+  };
   return http.createServer(async (req, res) => {
     try {
       const url = new URL(req.url || "/", `http://${req.headers.host || "127.0.0.1"}`);
@@ -126,6 +151,29 @@ export function createUiServer(repo: RepoStore, config: Config): http.Server {
         }
       }
 
+      if (req.method === "POST") {
+        if (!sameOrigin(req)) {
+          json(res, 403, { ok: false, error: "cross-origin request rejected" });
+          return;
+        }
+        if (!requireJson(req)) {
+          json(res, 415, { ok: false, error: "Content-Type must be application/json" });
+          return;
+        }
+      }
+
+      if (req.method === "GET" && staticMap[p]) {
+        const asset = staticMap[p];
+        try {
+          const body = fs.readFileSync(asset.file);
+          res.writeHead(200, { "Content-Type": asset.type, "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" });
+          res.end(body);
+        } catch {
+          json(res, 404, { ok: false, error: "asset missing" });
+        }
+        return;
+      }
+
       if (req.method === "GET" && (p === "/" || p === "/index.html")) {
         let html = "";
         try {
@@ -140,7 +188,7 @@ export function createUiServer(repo: RepoStore, config: Config): http.Server {
       }
 
       if (req.method === "GET" && p === "/api/health") {
-        json(res, 200, { ok: true, name: "northstar-memory", version: "2.2.0" });
+        json(res, 200, { ok: true, name: "northstar-memory", version: "2.3.0" });
         return;
       }
 
@@ -153,6 +201,7 @@ export function createUiServer(repo: RepoStore, config: Config): http.Server {
         const r = repo.list({
           session_key: url.searchParams.get("session") || undefined,
           kind: url.searchParams.get("kind") === "range" ? "range" : url.searchParams.get("kind") === "turn" ? "turn" : undefined,
+          quality: url.searchParams.get("quality") === "incomplete" ? "incomplete" : undefined,
           page: Number(url.searchParams.get("page") || 1),
           page_size: Number(url.searchParams.get("page_size") || 30),
         });
@@ -253,6 +302,10 @@ export function createUiServer(repo: RepoStore, config: Config): http.Server {
 
       if (req.method === "POST" && p === "/api/purge") {
         const body = await readBody(req);
+        if (body.confirm !== true) {
+          json(res, 400, { ok: false, error: "confirm required" });
+          return;
+        }
         const r = repo.purge(String(body.trash_id || ""));
         json(res, 200, r);
         return;
@@ -267,9 +320,11 @@ export function createUiServer(repo: RepoStore, config: Config): http.Server {
 
       json(res, 404, { ok: false, error: "not found" });
     } catch (e: any) {
-      const code = e && e.code === "CONFLICT" ? 409 : e && e.code === "NOT_FOUND" ? 404 : 500;
-      logWarn(`ui ${req.method} ${req.url} -> ${e && e.message}`);
-      json(res, code, { ok: false, error: e && e.message ? e.message : String(e), code: e && e.code });
+      const codeMap: Record<string, number> = { CONFLICT: 409, NOT_FOUND: 404, INVALID_ARG: 400, LOCK_TIMEOUT: 503, CORRUPT_RECORD: 500, IO_ERROR: 500 };
+      const status = (e && codeMap[e.code]) || (String(e && e.message).includes("too large") ? 413 : 500);
+      const safeUrl = String(req.url || "").replace(/token=[^&]*/g, "token=***");
+      logWarn(`ui ${req.method} ${safeUrl} -> ${e && e.message}`);
+      json(res, status, { ok: false, error: e && e.message ? e.message : String(e), code: e && e.code });
     }
   });
 }

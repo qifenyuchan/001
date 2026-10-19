@@ -70,11 +70,19 @@ AI 仍能从这条滚动锚点接上）。完整历史不注入，用 `memory_se
 ![记忆流（浅色）](docs/screenshots/feed-light.png)
 ![详情面板（七字段编辑）](docs/screenshots/detail-light.png)
 
+移动端（侧栏抽屉 + 全屏详情）：
+
+![移动端记忆流](docs/screenshots/mobile-feed.png)
+![移动端详情](docs/screenshots/mobile-detail.png)
+
 - 左侧导航（记忆流 / 会话 / 冲突 / 回收站）+ 会话列表；中间时间线；右侧详情抽屉
+- **自适应布局**：≥1280 三栏；960–1279 收窄；<960 侧栏变抽屉；<760 详情全屏；任意宽度文本自动换行/省略，不横向溢出
+- **面板吸附**：拖动详情左边缘在 340/420/520/640 四档吸附，双击复位；宽度记忆在本地
 - 七字段**逐字段**编辑，缺失字段琥珀色提示；乐观锁（多设备同时改会提示冲突）
 - 范围总结用紫色标线与"范围总结"标签区分，不与单轮混淆
-- 删除进回收站（墓碑，可恢复）；编辑保留旧版快照
-- 20/30 条分页、全局搜索（`/` 聚焦）、浅色/深色主题、零外部资源
+- 删除进回收站（墓碑，可恢复）；编辑保留旧版快照（可回滚）
+- 服务端分页（加载更多追加）、全局搜索（`/` 聚焦）、浅色/深色主题、零外部资源
+- 前端拆分为 `index.html`（结构）+ `styles.css`（样式）+ `app.js`（逻辑）
 
 ## CLI（可选，调试与补录）
 
@@ -163,7 +171,7 @@ node dist/migrate.js --apply   --from "<旧>/pc_host/data" --data ./data --repor
 
 - 只读旧目录（迁移前后旧数据哈希不变）；自动备份旧数据到 `migration/backup_pc_host_data_<ts>/`
 - `event → turn`、`topic → range`（`basedOn` 解析 covers，悬空引用进报告）
-- 幂等：重复执行条数不变；逐条 sha256 对账
+- 幂等且不覆盖：重复执行只补缺失文件，已存在记录/会话名（含人工修改）一律跳过
 - 实测：31/31 条（27 turn + 4 range）、35 个会话名、4 条"缺原因"如实标记
 
 ## 备份 / 回滚
@@ -175,7 +183,7 @@ node dist/migrate.js --apply   --from "<旧>/pc_host/data" --data ./data --repor
 ## 测试
 
 ```bash
-npm test        # 10 套件 57 断言：schema/store/recall/range/search/mcp/ui/sync/migrate/auth
+npm test        # 11 套件 68 断言：schema/store/recall/range/search/mcp/ui/sync/migrate/auth/security
 npm run build   # TypeScript 构建（仅开发需要；dist/ 已随包提供）
 ```
 

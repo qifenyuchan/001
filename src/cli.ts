@@ -71,7 +71,8 @@ try {
       });
       let rangeAuto;
       if (res.range_due) {
-        const r = buildAutoRange(repo, res.session_key, Math.max(1, res.turn_no - config.rangeEvery + 1), res.turn_no);
+        const every = repo.rangeEveryOf(res.session_key);
+        const r = buildAutoRange(repo, res.session_key, Math.max(1, res.turn_no - every + 1), res.turn_no);
         if (r.ok) rangeAuto = { id: r.record.id, range: r.record.range };
       }
       out({ ...res, range_auto: rangeAuto });

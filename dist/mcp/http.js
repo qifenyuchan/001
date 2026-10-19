@@ -2,7 +2,7 @@
 // POST /mcp ：JSON-RPC 单请求；通知返回 202；带 Bearer 令牌鉴权
 import http from "node:http";
 import crypto from "node:crypto";
-import { checkToken } from "../auth.js";
+import { checkToken, isLoopbackHost } from "../auth.js";
 import { createRpcHandler } from "./jsonrpc.js";
 import { logInfo, logWarn } from "../log.js";
 const MAX_BODY = 4 * 1024 * 1024;
@@ -41,17 +41,38 @@ export function createHttpRpcServer(opts) {
                 json(res, 404, { ok: false, error: "not found; MCP endpoint is POST /mcp" });
                 return;
             }
+            const hostHeader = String(req.headers.host || "");
+            const hostOnly = hostHeader.startsWith("[") ? hostHeader.slice(0, hostHeader.indexOf("]") + 1) : hostHeader.split(":")[0];
+            if (!opts.authToken && !isLoopbackHost(hostOnly)) {
+                json(res, 403, { jsonrpc: "2.0", id: null, error: { code: -32002, message: "host not allowed" } });
+                return;
+            }
+            const origin = req.headers.origin;
+            if (origin) {
+                let ok = false;
+                try {
+                    ok = new URL(origin).host === hostHeader;
+                }
+                catch {
+                    ok = false;
+                }
+                if (!ok) {
+                    json(res, 403, { jsonrpc: "2.0", id: null, error: { code: -32002, message: "cross-origin request rejected" } });
+                    return;
+                }
+            }
             if (req.method === "OPTIONS") {
-                res.writeHead(204, {
-                    "Access-Control-Allow-Origin": req.headers.origin || "*",
-                    "Access-Control-Allow-Headers": "content-type, authorization, mcp-session-id",
-                    "Access-Control-Allow-Methods": "POST, OPTIONS",
-                });
+                res.writeHead(204, { Allow: "POST, OPTIONS" });
                 res.end();
                 return;
             }
             if (req.method !== "POST") {
                 json(res, 405, { ok: false, error: "method not allowed; use POST /mcp" });
+                return;
+            }
+            const ct = String(req.headers["content-type"] || "").toLowerCase();
+            if (!ct.startsWith("application/json")) {
+                json(res, 415, { jsonrpc: "2.0", id: null, error: { code: -32003, message: "Content-Type must be application/json" } });
                 return;
             }
             if (!checkToken(req, url, opts.authToken)) {
