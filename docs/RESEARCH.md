@@ -298,6 +298,16 @@
 - 红海警告：编码 Agent 记忆赛道极度拥挤（四轮见几十个），**不要进别人主场**
 - 明细：[RESEARCH-DOMAINS.md](RESEARCH-DOMAINS.md)
 
+## 9.9 四轮总整合（2026-10-20，最终版）
+
+调研阶段到此收线。四轮数据已合并为统一数据集（`research/github-all.json`）并产出总整合报告：**[RESEARCH-SYNTHESIS.md](RESEARCH-SYNTHESIS.md)**。
+
+- **真实并集 3704**（修正此前「4118」的口径错误：入库合计 3840 − 跨轮重叠 136）
+- 跨轮复现 131 个（126 双轮 + 5 三轮，剔除 1 噪声）：**被两种正交视角同时命中 = 最强信号**；其中低 star + 多轮命中的 yantrikdb / mnemos / MemHop 是被低估的方向
+- 五条多轮独立确认的收敛结论：结构化字段路线（工程 ADR + 文创角色卡双验证）、巩固与遗忘是最大空白且成熟算法在圈外、SQLite+FTS5 是及格线而差异化在人可读、记忆投毒一次写入永久污染、简单机制胜出
+- 六条被推翻的判断全部留痕（含 FSRS→ACT-R、图库理由修正、4118→3704）
+- **最终路线图（P0–P3 唯一版本）以该报告 §5 为准**——P1 共 12 项，9 项低成本高确定性
+
 ## 10. 参考来源（节选）
 
 - O-mega, *AI Agent Memory in 2026: Architectures & Tools* — https://o-mega.ai/articles/ai-agent-memory-in-2026-architectures-tools

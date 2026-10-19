@@ -217,6 +217,7 @@ npm run build   # TypeScript 构建（仅开发需要；dist/ 已随包提供）
 - [相邻领域零件库](docs/RESEARCH-ADJACENT.md)：1037 个非记忆项目的「零件 → 记忆用途」映射
 - [更边缘的一层](docs/RESEARCH-EDGE.md)：769 个上游项目，推翻了前一轮的三个判定
 - [按人群扫](docs/RESEARCH-DOMAINS.md)：理工与文创的土办法——世界书触发式注入、故事圣经、ADR
+- [四轮总整合](docs/RESEARCH-SYNTHESIS.md)：3704 个仓库的合并分析、收敛结论与最终路线图
 - [Agent 协议](docs/AGENTS.md) · [压缩版 Skill](docs/SKILL.md)
 - [宿主接入](docs/HOSTS.md) · [数据格式](docs/DATA_FORMAT.md)
 - [多设备同步](docs/REMOTE.md) · [压力实测](docs/LOAD.md)
