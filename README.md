@@ -67,10 +67,14 @@ AI 仍能从这条滚动锚点接上）。完整历史不注入，用 `memory_se
 
 ## UI
 
-- 会话列表 → 轮次时间线（范围总结卡插在区间末尾，缺失轮次显示缺口卡）
-- 详情页：七字段**逐字段**编辑，缺失字段琥珀色提示，一键"填无"；原文折叠编辑
-- 删除两步确认进回收站；恢复/彻底删除（输入 PURGE）
-- 20 条/页服务端分页；检索页；深色主题；零外部资源
+![记忆流（浅色）](docs/screenshots/feed-light.png)
+![详情面板（七字段编辑）](docs/screenshots/detail-light.png)
+
+- 左侧导航（记忆流 / 会话 / 冲突 / 回收站）+ 会话列表；中间时间线；右侧详情抽屉
+- 七字段**逐字段**编辑，缺失字段琥珀色提示；乐观锁（多设备同时改会提示冲突）
+- 范围总结用紫色标线与"范围总结"标签区分，不与单轮混淆
+- 删除进回收站（墓碑，可恢复）；编辑保留旧版快照
+- 20/30 条分页、全局搜索（`/` 聚焦）、浅色/深色主题、零外部资源
 
 ## CLI（可选，调试与补录）
 
@@ -88,24 +92,30 @@ node dist/cli.js export [--out backup.json]
 
 全局参数：`--data <dir>`、`--range-every <n>`。
 
-## 跨设备 / 跨网络
+## 跨设备 / 跨网络（本地优先）
 
-默认只在本机可用（MCP stdio + 127.0.0.1）。跨设备有两种正确做法：
+**不共用一台设备，也不托管用户数据。** 每台设备都有完整副本，同步走你自己的存储：
 
-- **Hub 模式（推荐）**：一台常开主机跑服务，其他设备通过 `http://<hub>:8788/mcp`（Bearer 令牌）接入，
-  UI 用 `http://<hub>:8777/?token=...` 打开。跨公网建议 Tailscale / Cloudflare Tunnel / SSH 隧道。
-- **文件同步模式**：`data/` 是纯文件（一条记录一个 JSON、无索引），可放 Syncthing / OneDrive / git；
-  不同轮次天然不冲突；删除不会收敛（无墓碑），强一致编辑请用 Hub。
-
-完整步骤、安全清单与反代示例见 **[docs/REMOTE.md](docs/REMOTE.md)**。
+- 把 `data/` 放进 OneDrive / iCloud / Syncthing / 坚果云的同步目录，或提交到 git 仓库
+- 每台设备跑本地实例（stdio MCP），记录自带 `device_id` 与字段级时间戳
+- 同一轮在两台设备被改：同步工具产生冲突副本 → 下次启动自动**逐字段合并**，冲突记入 `data/conflicts/`
+- 删除写**墓碑**（`data/tombstones/`），随同步传播，不会"删了又回来"；删除后又被编辑则按时间判定是否复活
+- 多人：每人一个 `space`（`data/spaces/<space>/`），互不共用设备；团队共享 = 共享同一同步目录
 
 ```bash
-# Hub 启动（无令牌绑定非回环地址会被拒绝）
-node dist/server.js --data ./data \
-  --ui-host 0.0.0.0 --ui-port 8777 \
-  --http-host 0.0.0.0 --http-port 8788 \
-  --token <32位以上随机令牌>
+# 设备 A 与设备 B 各自跑本地实例，data 放在同一同步目录
+node dist/server.js --data "D:/OneDrive/northstar/data"
+node dist/cli.js sync doctor   # 查看设备 id / 墓碑 / 冲突合并情况
 ```
+
+可选：需要让远程/无头设备直接连某台常开机器时，才启用 MCP over HTTP（带令牌）：
+
+```bash
+node dist/server.js --data ./data --http-host 0.0.0.0 --http-port 8788 --token <令牌>
+```
+
+跨公网优先 Tailscale / Cloudflare Tunnel / SSH 隧道；裸端口必须 HTTPS 反代。
+完整说明见 **[docs/REMOTE.md](docs/REMOTE.md)**。
 
 ## 配置
 
@@ -121,24 +131,28 @@ node dist/server.js --data ./data \
 | `recall_max_chars` | `1200` | 注入块预算 |
 | `raw_head` / `raw_tail` | `1200` / `600` | 原文头尾窗口 |
 
-环境变量：`TM_DATA_DIR`、`TM_UI_PORT`、`TM_UI_HOST`、`TM_HTTP_PORT`、`TM_HTTP_HOST`、`TM_AUTH_TOKEN`、`TM_RANGE_EVERY`。
+环境变量：`TM_DATA_DIR`、`TM_UI_PORT`、`TM_UI_HOST`、`TM_HTTP_PORT`、`TM_HTTP_HOST`、`TM_AUTH_TOKEN`、`TM_RANGE_EVERY`、`TM_DEVICE_ID`。
 
 ## 数据布局（单一真源，无镜像、无 SQLite）
 
 ```
 data/
-  sessions/<session_key>/
-    _meta.json              会话名 / range_every
-    turn-0001.json          一轮一条（七字段 + 原文 + 元数据）
-    range-0001-0010.json    每 N 轮范围总结
-    .rev                    跨进程刷新标记
-  .trash/                   删除与编辑快照（可恢复）
-  .locks/                   短写锁
-  logs/server.log           运行日志（5MB 轮转）
+  spaces/<space_id>/space.json      空间元数据（members 预留给团队）
+  spaces/<space_id>/sessions/<key>/
+    _meta.json                      会话名 / range_every
+    turn-0001.json                  一轮一条（七字段 + 原文 + 字段级同步元数据）
+    range-0001-0010.json            每 N 轮范围总结
+    .rev                            跨进程刷新标记
+  tombstones/<record_id>.json       删除墓碑（含完整记录，可恢复；随同步传播）
+  conflicts/                        冲突副本归档与合并报告
+  .trash/                           编辑快照（可回滚）
+  .locks/                           短写锁
+  logs/server.log                   运行日志（5MB 轮转）
 ```
 
 一条记录一个 JSON 文件：可读、可 git、可手工修、可直接备份。
 `content`（七字段文本）与 `title` 都是读时派生，不落盘，杜绝两处不一致。
+每条记录带 `space_id / updated_by / field_meta`，多设备合并时按字段时间戳与设备 id 决胜。
 
 ## 从旧版（0.9.x）迁移
 
@@ -161,7 +175,7 @@ node dist/migrate.js --apply   --from "<旧>/pc_host/data" --data ./data --repor
 ## 测试
 
 ```bash
-npm test        # 8 套件 48 断言：schema/store/recall/range/search/mcp/ui/migrate
+npm test        # 10 套件 57 断言：schema/store/recall/range/search/mcp/ui/sync/migrate/auth
 npm run build   # TypeScript 构建（仅开发需要；dist/ 已随包提供）
 ```
 

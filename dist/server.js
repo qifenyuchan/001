@@ -93,7 +93,7 @@ if (!config.noUi) {
 if (config.httpPort > 0 && !config.noMcp) {
     startHttpRpcServer({
         serverName: "northstar-memory",
-        serverVersion: "2.0.0",
+        serverVersion: "2.2.0",
         instructions: INSTRUCTIONS,
         tools: tools.defs,
         callTool: tools.callTool,
@@ -111,7 +111,7 @@ if (config.httpPort > 0 && !config.noMcp) {
 if (!config.uiOnly && !config.noMcp) {
     startRpcServer({
         serverName: "northstar-memory",
-        serverVersion: "2.0.0",
+        serverVersion: "2.2.0",
         instructions: INSTRUCTIONS,
         tools: tools.defs,
         callTool: tools.callTool,

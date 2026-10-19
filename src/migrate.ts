@@ -11,6 +11,7 @@ import { contentToFields } from "./store/schema.js";
 import { fmtDay, sanitizeKey } from "./core/util.js";
 import { parseSevenFields } from "./core/parse.js";
 import type { MemoryRecord, SessionMeta } from "./core/types.js";
+import { SEVEN_FIELD_KEYS } from "./core/types.js";
 
 interface LegacyEntry {
   uid?: string;
@@ -191,12 +192,17 @@ function buildLegacyRecord(e: LegacyEntry, chat: string, key: string, turnNo: nu
     schema: 1,
     id,
     kind,
+    space_id: "personal",
     session_id: chat,
     session_key: key,
     turn_no: turnNo,
     created_at: e.createdAt || Date.now(),
     updated_at: e.updatedAt || e.createdAt || Date.now(),
     revision: 1,
+    updated_by: "legacy",
+    field_meta: Object.fromEntries(
+      [...SEVEN_FIELD_KEYS, "raw_text"].map(k => [k, { ts: e.updatedAt || e.createdAt || Date.now(), by: "legacy" }])
+    ),
     fields,
     raw_text: raw,
     raw_truncated: false,
@@ -244,8 +250,7 @@ function backup(): string | null {
 
 function apply(): number {
   let written = 0;
-  const metasByKey = new Map(metaList.map(m => [m.session_key, m]));
-  const sessionDirOf = (key: string) => path.join(config.dataDir, "sessions", key);
+  const sessionDirOf = (key: string) => path.join(config.dataDir, "spaces", "personal", "sessions", key);
   for (const m of metaList) {
     ensureDir(sessionDirOf(m.session_key));
     atomicWriteJson(path.join(sessionDirOf(m.session_key), "_meta.json"), m);
@@ -301,7 +306,7 @@ function verify(): { ok: boolean; total: number; turns: number; ranges: number; 
 
 function metasWithNames(): number {
   let n = 0;
-  const dir = path.join(config.dataDir, "sessions");
+  const dir = path.join(config.dataDir, "spaces", "personal", "sessions");
   for (const key of listDirs(dir)) {
     const m = readJson<SessionMeta>(path.join(dir, key, "_meta.json"));
     if (m.ok && m.value && m.value.name) n++;

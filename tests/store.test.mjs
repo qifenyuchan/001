@@ -20,9 +20,9 @@ test("保存一轮：目录出现 _meta/turn/.rev", () => {
   const r = repo.upsertTurn({ session_id: "s1", turn_no: 1, fields: FULL });
   assert.equal(r.ok, true);
   assert.equal(r.quality, "complete");
-  assert.ok(fs.existsSync(path.join(dir, "sessions", "s1", "_meta.json")));
-  assert.ok(fs.existsSync(path.join(dir, "sessions", "s1", "turn-0001.json")));
-  assert.ok(fs.existsSync(path.join(dir, "sessions", "s1", ".rev")));
+  assert.ok(fs.existsSync(path.join(dir, "spaces", "personal", "sessions", "s1", "_meta.json")));
+  assert.ok(fs.existsSync(path.join(dir, "spaces", "personal", "sessions", "s1", "turn-0001.json")));
+  assert.ok(fs.existsSync(path.join(dir, "spaces", "personal", "sessions", "s1", ".rev")));
 });
 
 test("同 turn_no 重存：不新增文件、revision+1、旧版进回收站", () => {
@@ -30,7 +30,7 @@ test("同 turn_no 重存：不新增文件、revision+1、旧版进回收站", (
   repo.upsertTurn({ session_id: "s1", turn_no: 1, fields: FULL });
   const r2 = repo.upsertTurn({ session_id: "s1", turn_no: 1, fields: { ...FULL, 事情: "事情A修订" } });
   assert.equal(r2.created, false);
-  const files = fs.readdirSync(path.join(dir, "sessions", "s1")).filter(f => f.startsWith("turn-"));
+  const files = fs.readdirSync(path.join(dir, "spaces", "personal", "sessions", "s1")).filter(f => f.startsWith("turn-"));
   assert.equal(files.length, 1);
   const rec = repo.all()[0];
   assert.equal(rec.revision, 2);
@@ -113,7 +113,7 @@ test("原生记录 origin=native、legacy 记录带 legacy 元数据", () => {
   const { repo } = tmpStore();
   const r = repo.upsertTurn({ session_id: "s1", turn_no: 1, fields: FULL });
   assert.equal(repo.get(r.id).origin, "native");
-  const raw = fs.readFileSync(path.join(repo.dataDir, "sessions", "s1", "turn-0001.json"), "utf8");
+  const raw = fs.readFileSync(path.join(repo.dataDir, "spaces", "personal", "sessions", "s1", "turn-0001.json"), "utf8");
   const obj = JSON.parse(raw);
   assert.equal(obj.origin, "native");
   assert.equal(obj.legacy, undefined);

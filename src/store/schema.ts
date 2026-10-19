@@ -112,6 +112,8 @@ export interface BuildOpts {
   rawTail: number;
   sessionKeyOverride?: string;
   sourceDefault?: string;
+  deviceId: string;
+  spaceId: string;
 }
 
 export function buildTurn(input: SaveInput, opts: BuildOpts, existing?: MemoryRecord): MemoryRecord {
@@ -141,16 +143,27 @@ export function buildTurn(input: SaveInput, opts: BuildOpts, existing?: MemoryRe
   const rating = isFinite(ratingRaw) ? Math.max(1, Math.min(5, Math.floor(ratingRaw))) : 3;
 
   const now = opts.nowMs;
+  // 字段级同步元数据：仅记录发生变化的字段，冲突合并时按 ts/by 决胜
+  const fieldMeta: Record<string, { ts: number; by: string }> = { ...(existing && existing.field_meta ? existing.field_meta : {}) };
+  for (const k of SEVEN_FIELD_KEYS) {
+    const prev = existing ? existing.fields[k] || "" : null;
+    if (prev === null || prev !== (fields[k] || "")) fieldMeta[k] = { ts: now, by: opts.deviceId };
+  }
+  if (!existing || (existing.raw_text || "") !== rawText) fieldMeta["raw_text"] = { ts: now, by: opts.deviceId };
+
   return {
     schema: 1,
     id: existing ? existing.id : genId(),
     kind: "turn",
+    space_id: existing ? existing.space_id : opts.spaceId,
     session_id: sessionId,
     session_key: sessionKey,
     turn_no: existing ? existing.turn_no : Number(input.turn_no) || 1,
     created_at: existing ? existing.created_at : now,
     updated_at: now,
     revision: existing ? existing.revision + 1 : 1,
+    updated_by: opts.deviceId,
+    field_meta: fieldMeta,
     fields,
     raw_text: rawText,
     raw_truncated: rawTruncated,
@@ -195,4 +208,17 @@ export function ensureRecordShape(value: unknown): MemoryRecord | null {
   if (!v || typeof v !== "object") return null;
   if (v.schema !== 1 || !v.id || !v.session_key || !v.fields || (v.kind !== "turn" && v.kind !== "range")) return null;
   return v as MemoryRecord;
+}
+
+export const CANONICAL_TURN_RE = /^turn-\d{4,}\.json$/;
+export const CANONICAL_RANGE_RE = /^range-\d{4,}-\d{4,}\.json$/;
+
+export function isCanonicalRecordFile(name: string): boolean {
+  return CANONICAL_TURN_RE.test(name) || CANONICAL_RANGE_RE.test(name);
+}
+
+export function isConflictCandidate(name: string): boolean {
+  if (name === "_meta.json" || name.startsWith(".")) return false;
+  if (isCanonicalRecordFile(name)) return false;
+  return /^(turn-\d{4,}|range-\d{4,}-\d{4,}).*\.json$/i.test(name);
 }

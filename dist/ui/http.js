@@ -132,11 +132,26 @@ export function createUiServer(repo, config) {
                 return;
             }
             if (req.method === "GET" && p === "/api/health") {
-                json(res, 200, { ok: true, name: "northstar-memory", version: "2.0.0" });
+                json(res, 200, { ok: true, name: "northstar-memory", version: "2.2.0" });
                 return;
             }
             if (req.method === "GET" && p === "/api/stats") {
                 json(res, 200, repo.stats());
+                return;
+            }
+            if (req.method === "GET" && p === "/api/list") {
+                const r = repo.list({
+                    session_key: url.searchParams.get("session") || undefined,
+                    kind: url.searchParams.get("kind") === "range" ? "range" : url.searchParams.get("kind") === "turn" ? "turn" : undefined,
+                    page: Number(url.searchParams.get("page") || 1),
+                    page_size: Number(url.searchParams.get("page_size") || 30),
+                });
+                const sessions = new Map(repo.listSessions(true).map(s => [s.session_key, s.name]));
+                json(res, 200, { ...r, records: r.records.map(x => decorate(x, sessions.get(x.session_key))) });
+                return;
+            }
+            if (req.method === "GET" && p === "/api/conflicts") {
+                json(res, 200, { ok: true, reports: repo.conflictReports(), files: repo.conflictFiles() });
                 return;
             }
             if (req.method === "GET" && p === "/api/sessions") {

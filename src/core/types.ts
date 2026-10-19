@@ -25,16 +25,25 @@ export interface LegacyMeta {
   body?: string;
 }
 
+// 字段级同步元数据：多设备同一字段冲突时取 ts 大者（平局按 device id）
+export interface FieldMeta {
+  ts: number;
+  by: string;
+}
+
 export interface MemoryRecord {
   schema: 1;
   id: string;
   kind: RecordKind;
+  space_id: string;
   session_id: string;
   session_key: string;
   turn_no: number;
   created_at: number;
   updated_at: number;
   revision: number;
+  updated_by: string;
+  field_meta?: Record<string, FieldMeta>;
   fields: SevenFields;
   raw_text: string;
   raw_truncated: boolean;
@@ -49,6 +58,16 @@ export interface MemoryRecord {
   range?: RangeMeta;
   auto?: boolean;
   legacy?: LegacyMeta;
+}
+
+export interface Tombstone {
+  schema: 1;
+  id: string;
+  session_key: string;
+  deleted_at: number;
+  by: string;
+  reason: string;
+  record: MemoryRecord;
 }
 
 export interface SessionMeta {
@@ -160,6 +179,10 @@ export interface StatsResult {
   gaps: number;
   data_dir: string;
   version: string;
+  space_id?: string;
+  device_id?: string;
+  tombstones?: number;
+  conflicts?: number;
 }
 
 export interface TrashItem {

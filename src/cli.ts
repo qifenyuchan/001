@@ -120,6 +120,25 @@ try {
       out({ ok: true, sessions: repo.listSessions(!!flags.all) });
       break;
     }
+    case "sync": {
+      const sub = pos[0] || "status";
+      if (sub === "status") {
+        out(repo.syncStatus());
+      } else if (sub === "doctor") {
+        const st = repo.syncStatus();
+        out({
+          ...st,
+          hints: [
+            st.conflicts > 0 ? "存在冲突副本，已在 data/conflicts 归档；请检查合并结果" : "无冲突副本",
+            st.tombstones > 0 ? "存在删除墓碑（会随同步传播，属正常）" : "无删除墓碑",
+            "多设备：把 data/ 放进同一同步目录（OneDrive/iCloud/Syncthing/git），各设备独立 device_id",
+          ],
+        });
+      } else {
+        throw new NorthstarError("INVALID_ARG", `unknown sync subcommand: ${sub}`);
+      }
+      break;
+    }
     case "range": {
       const session = typeof flags.session === "string" ? flags.session : "default";
       const from = Number(flags.from || 0);
@@ -150,6 +169,7 @@ try {
           "  node dist/cli.js list [--session id] [--kind turn|range] [--page N] [--page-size 20]",
           "  node dist/cli.js get <id>",
           "  node dist/cli.js sessions [--all]",
+          "  node dist/cli.js sync [status|doctor]",
           "  node dist/cli.js stats",
           "  node dist/cli.js range --session <id> --from N --to M",
           "  node dist/cli.js export [--out file.json]",

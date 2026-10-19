@@ -1,6 +1,6 @@
 # 数据格式（DATA_FORMAT）
 
-单一真源：`data/sessions/<session_key>/<record>.json`。无索引文件、无 SQLite、无镜像。
+单一真源：`data/spaces/<space_id>/sessions/<session_key>/<record>.json`。无索引文件、无 SQLite、无镜像。
 
 ## 文件命名
 
@@ -9,7 +9,9 @@
 | 单轮 | `turn-<4位轮次>.json` | `turn-0007.json` |
 | 范围总结 | `range-<4位起>-<4位止>.json` | `range-0001-0010.json` |
 | 会话元数据 | `_meta.json` | — |
-| 刷新标记 | `.rev` | — |
+| 空间元数据 | `spaces/<space_id>/space.json` | — |
+| 删除墓碑 | `tombstones/<record_id>.json` | — |
+| 冲突副本 | 同步工具生成（`*.sync-conflict-*` 等），启动时合并归档 | — |
 
 ## 记录 schema（v1）
 
@@ -18,12 +20,19 @@
   "schema": 1,
   "id": "tm_muwsmpge_hrpp",
   "kind": "turn | range",
+  "space_id": "personal",
   "session_id": "宿主会话 id（原样）",
   "session_key": "清洗后的键（目录名）",
   "turn_no": 7,
   "created_at": 1791298086494,
   "updated_at": 1791298086494,
   "revision": 3,
+  "updated_by": "dev_1bfc459b",
+  "field_meta": {
+    "时间": { "ts": 1791298086494, "by": "dev_1bfc459b" },
+    "事情": { "ts": 1791298086494, "by": "dev_1bfc459b" },
+    "raw_text": { "ts": 1791298086494, "by": "dev_1bfc459b" }
+  },
   "fields": {
     "时间": "2026-10-19",
     "地点": "无",
@@ -53,6 +62,8 @@
 - `content`（七字段文本）与 `title` 不落盘，读取时由 `fieldsToContent()` / `deriveTitleFromFields()` 生成。
 - `range` 仅 `kind="range"` 有；`legacy` 仅迁移条有，只作审计，不参与检索与注入。
 - `revision` 每次保存/编辑 +1；`memory_update` 可带 `expect_revision` 做乐观锁。
+- `space_id / updated_by / field_meta` 是多设备同步的基础：合并时按字段 `ts` 决胜，平局按 `by`。
+- `device_id` 存在 `~/.northstar/device_id`，不放进同步目录（避免多设备互相覆盖）。
 
 ## quality 语义
 
@@ -77,20 +88,44 @@
 }
 ```
 
-## 回收站 `.trash/<trash_id>.json`
+## 删除墓碑 `tombstones/<id>.json`
 
 ```json
 {
-  "trash_id": "1792407809369_tm_xxx_delete",
-  "record": { "...完整记录..." },
+  "schema": 1,
+  "id": "tm_…",
+  "session_key": "s1",
   "deleted_at": 1792407809369,
-  "original_path": "sessions/s1/turn-0007.json",
-  "reason": "delete | edit | range-edit"
+  "by": "dev_…",
+  "reason": "delete",
+  "record": { "...完整记录..." }
 }
 ```
 
-- `delete`：删除操作；`edit`：编辑前快照（可回滚）。
-- 恢复：写回原路径（目标存在则 CONFLICT）；彻底删除：输入 PURGE。
+- 墓碑随文件同步传播；其他设备看到后删除本地记录
+- 若本地记录 `updated_at > deleted_at`，保留记录（删除后又被编辑 = 有意复活）
+- 恢复 = 删除墓碑 + 写回记录
+
+## 回收站 `.trash/<trash_id>.json`
+
+编辑前的快照（回滚用）：
+
+```json
+{
+  "trash_id": "1792407809369_tm_xxx_edit",
+  "record": { "...完整记录..." },
+  "deleted_at": 1792407809369,
+  "original_path": "spaces/personal/sessions/s1/turn-0007.json",
+  "reason": "edit | range-edit"
+}
+```
+
+## 冲突合并
+
+- 触发：同步工具生成 `turn-0001 (conflicted copy).json`、`*.sync-conflict-*` 等非 canonical 文件
+- 处理：按记录 id / 天然键找到目标 → 逐字段按 `field_meta.ts` 取较新值 → 写回 canonical → 副本移入 `data/conflicts/` → 生成 `.report.json`
+- 字段值冲突时保留较新值，被丢弃的值记录在报告里（UI「冲突」页可查）
+- 多设备产生不同 id 但同一轮次：按天然键合并到已有记录，避免重复
 
 ## 并发与一致性
 
