@@ -1,4 +1,4 @@
-// http.ts — 极简 UI 服务（仅 127.0.0.1；无框架；零依赖）
+// http.ts — 极简 UI 服务（零依赖；支持令牌鉴权与远程绑定）
 import http from "node:http";
 import fs from "node:fs";
 import path from "node:path";
@@ -6,6 +6,7 @@ import { PACKAGE_ROOT } from "../config.js";
 import { searchRecords } from "../features/search.js";
 import { deriveTitleFromFields } from "../core/title.js";
 import { logWarn } from "../log.js";
+import { checkToken, extractToken, safeEqual, TOKEN_COOKIE, isLoopbackHost } from "../auth.js";
 const MAX_BODY = 2 * 1024 * 1024;
 function json(res, status, payload) {
     const body = JSON.stringify(payload);
@@ -69,9 +70,11 @@ function decorate(rec, sessionName) {
         raw_text: rec.raw_text,
     };
 }
-function hostAllowed(hostHeader) {
+function hostAllowed(hostHeader, authToken) {
     if (!hostHeader)
         return false;
+    if (authToken)
+        return true; // 有令牌时允许任意 Host（远程/域名访问）
     const host = hostHeader.split(":")[0].toLowerCase();
     return host === "127.0.0.1" || host === "localhost" || host === "[::1]" || host === "::1";
 }
@@ -79,12 +82,42 @@ export function createUiServer(repo, config) {
     const htmlFile = path.join(PACKAGE_ROOT, "ui", "index.html");
     return http.createServer(async (req, res) => {
         try {
-            if (!hostAllowed(req.headers.host)) {
+            const url = new URL(req.url || "/", `http://${req.headers.host || "127.0.0.1"}`);
+            const p = url.pathname;
+            if (!hostAllowed(req.headers.host, config.authToken)) {
                 json(res, 403, { ok: false, error: "host not allowed" });
                 return;
             }
-            const url = new URL(req.url || "/", `http://${req.headers.host || "127.0.0.1"}`);
-            const p = url.pathname;
+            // 令牌引导：/?token=xxx → 写 Cookie 后重定向（去掉 URL 里的令牌）
+            const queryToken = url.searchParams.get("token") || "";
+            if (config.authToken && queryToken) {
+                if (!safeEqual(queryToken, config.authToken)) {
+                    json(res, 401, { ok: false, error: "invalid token" });
+                    return;
+                }
+                url.searchParams.delete("token");
+                const target = url.pathname + (url.search ? url.search : "") + url.hash;
+                res.writeHead(302, {
+                    "Set-Cookie": `${TOKEN_COOKIE}=${encodeURIComponent(config.authToken)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=2592000`,
+                    Location: target || "/",
+                });
+                res.end();
+                return;
+            }
+            // 鉴权：/api/health 放行，其余全部需要令牌（配置了令牌时）
+            if (config.authToken && p !== "/api/health") {
+                if (!checkToken(req, url, config.authToken)) {
+                    if (p.startsWith("/api/")) {
+                        json(res, 401, { ok: false, error: "unauthorized: token required" });
+                    }
+                    else {
+                        res.writeHead(401, { "Content-Type": "text/html; charset=utf-8" });
+                        res.end(`<!doctype html><meta charset="utf-8"><body style="font-family:system-ui;background:#0f1216;color:#e6edf3;padding:40px">` +
+                            `<h2>需要访问令牌</h2><p>请在地址后追加 <code>/?token=你的令牌</code> 打开一次，浏览器会记住。</p></body>`);
+                    }
+                    return;
+                }
+            }
             if (req.method === "GET" && (p === "/" || p === "/index.html")) {
                 let html = "";
                 try {
@@ -214,3 +247,4 @@ export function startUiServer(repo, config) {
         });
     });
 }
+export { isLoopbackHost, extractToken };

@@ -1,5 +1,5 @@
-// jsonrpc.ts — 手写 MCP stdio 协议（换行分帧 JSON-RPC 2.0；零依赖）
-// 铁律：stdout 只允许协议行；日志一律走 stderr。
+// jsonrpc.ts — MCP JSON-RPC 2.0 核心（stdio + HTTP 共用同一处理器）
+// 铁律：stdio 模式下 stdout 只允许协议行；日志一律走 stderr。
 
 import readline from "node:readline";
 
@@ -18,80 +18,72 @@ export interface RpcOptions {
   onShutdown?: () => void;
 }
 
-interface Request {
-  jsonrpc: "2.0";
-  id?: string | number | null;
-  method: string;
-  params?: any;
+export type RpcHandler = (req: any) => any | null;
+
+function errorObj(id: unknown, code: number, message: string) {
+  return { jsonrpc: "2.0", id: id ?? null, error: { code, message } };
 }
 
-function send(msg: unknown): void {
-  process.stdout.write(JSON.stringify(msg) + "\n");
-}
-
-function reply(id: string | number | null | undefined, result: unknown): void {
-  if (id === undefined || id === null) return; // 通知不回复
-  send({ jsonrpc: "2.0", id, result });
-}
-
-function replyError(id: string | number | null | undefined, code: number, message: string): void {
-  if (id === undefined || id === null) return;
-  send({ jsonrpc: "2.0", id, error: { code, message } });
-}
-
-export function startRpcServer(opts: RpcOptions): void {
-  const rl = readline.createInterface({ input: process.stdin, crlfDelay: Infinity });
-  rl.on("line", line => {
-    const text = line.trim();
-    if (!text) return;
-    let req: Request;
-    try {
-      req = JSON.parse(text);
-    } catch {
-      send({ jsonrpc: "2.0", id: null, error: { code: -32700, message: "Parse error" } });
-      return;
+// 传输无关的 JSON-RPC 处理器：返回响应对象；通知返回 null
+export function createRpcHandler(opts: RpcOptions): RpcHandler {
+  return (req: any) => {
+    if (!req || typeof req !== "object" || typeof req.method !== "string") {
+      return errorObj(req && req.id, -32600, "Invalid Request");
     }
-    if (!req || typeof req.method !== "string") {
-      replyError(req && req.id, -32600, "Invalid Request");
-      return;
-    }
+    const isNotification = req.id === undefined || req.id === null;
     try {
       switch (req.method) {
         case "initialize":
-          reply(req.id, {
-            protocolVersion: "2024-11-05",
-            capabilities: { tools: {} },
-            serverInfo: { name: opts.serverName, version: opts.serverVersion },
-            instructions: opts.instructions,
-          });
-          break;
+          return {
+            jsonrpc: "2.0",
+            id: req.id,
+            result: {
+              protocolVersion: "2024-11-05",
+              capabilities: { tools: {} },
+              serverInfo: { name: opts.serverName, version: opts.serverVersion },
+              instructions: opts.instructions,
+            },
+          };
         case "notifications/initialized":
         case "notifications/cancelled":
-          break;
+          return null;
         case "ping":
-          reply(req.id, {});
-          break;
+          return { jsonrpc: "2.0", id: req.id, result: {} };
         case "tools/list":
-          reply(req.id, { tools: opts.tools });
-          break;
+          return { jsonrpc: "2.0", id: req.id, result: { tools: opts.tools } };
         case "tools/call": {
           const name = req.params && req.params.name;
           const args = (req.params && req.params.arguments) || {};
           const def = opts.tools.find(t => t.name === name);
-          if (!def) {
-            replyError(req.id, -32601, `Unknown tool: ${name}`);
-            break;
-          }
+          if (!def) return errorObj(req.id, -32601, `Unknown tool: ${name}`);
           const result = opts.callTool(name, args);
-          reply(req.id, result);
-          break;
+          return { jsonrpc: "2.0", id: req.id, result };
         }
         default:
-          replyError(req.id, -32601, `Method not found: ${req.method}`);
+          if (isNotification) return null;
+          return errorObj(req.id, -32601, `Method not found: ${req.method}`);
       }
     } catch (e: any) {
-      replyError(req.id, -32603, e && e.message ? e.message : String(e));
+      return errorObj(req.id, -32603, e && e.message ? e.message : String(e));
     }
+  };
+}
+
+export function startRpcServer(opts: RpcOptions): void {
+  const handler = createRpcHandler(opts);
+  const rl = readline.createInterface({ input: process.stdin, crlfDelay: Infinity });
+  rl.on("line", line => {
+    const text = line.trim();
+    if (!text) return;
+    let req: any;
+    try {
+      req = JSON.parse(text);
+    } catch {
+      process.stdout.write(JSON.stringify(errorObj(null, -32700, "Parse error")) + "\n");
+      return;
+    }
+    const res = handler(req);
+    if (res) process.stdout.write(JSON.stringify(res) + "\n");
   });
   rl.on("close", () => {
     if (opts.onShutdown) opts.onShutdown();

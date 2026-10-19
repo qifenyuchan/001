@@ -110,14 +110,20 @@ function fmt(ts){ if(!ts) return "—"; const d=new Date(ts); const p=n=>("0"+n)
 function qbadge(q){ return q==="complete" ? '<span class="badge ok">完整</span>' : q==="partial" ? '<span class="badge warn">部分</span>' : '<span class="badge deg">骨架</span>'; }
 function toast(msg, ms=2200){ const t=$("#toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove("show"), ms); }
 
+function askToken(){
+  const t = prompt("需要访问令牌（TM_AUTH_TOKEN）。输入后浏览器会记住：");
+  if(t){ location.href = "/?token=" + encodeURIComponent(t) + (location.hash || ""); }
+}
 async function apiGet(url){
   const r = await fetch(url, {headers:{"Accept":"application/json"}});
+  if(r.status === 401){ askToken(); throw new Error("unauthorized"); }
   const j = await r.json();
   if(!j.ok && j.error) throw new Error(j.error);
   return j;
 }
 async function apiPost(url, body){
   const r = await fetch(url, {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body||{})});
+  if(r.status === 401){ askToken(); throw new Error("unauthorized"); }
   const j = await r.json();
   if(!r.ok || !j.ok) throw new Error((j&&j.error)||("HTTP "+r.status));
   return j;

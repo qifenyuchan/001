@@ -1,0 +1,47 @@
+// auth.ts — 令牌校验（Bearer / Cookie / Query；恒定时间比较）
+import crypto from "node:crypto";
+export const TOKEN_COOKIE = "ns_token";
+export function safeEqual(a, b) {
+    const ha = crypto.createHash("sha256").update(a).digest();
+    const hb = crypto.createHash("sha256").update(b).digest();
+    return crypto.timingSafeEqual(ha, hb);
+}
+export function isLoopbackHost(host) {
+    const h = String(host || "").toLowerCase();
+    return h === "127.0.0.1" || h === "localhost" || h === "::1" || h === "[::1]";
+}
+export function parseCookies(header) {
+    const out = {};
+    if (!header)
+        return out;
+    for (const part of header.split(";")) {
+        const i = part.indexOf("=");
+        if (i < 0)
+            continue;
+        const k = part.slice(0, i).trim();
+        const v = part.slice(i + 1).trim();
+        if (k)
+            out[k] = decodeURIComponent(v);
+    }
+    return out;
+}
+export function extractToken(req, url) {
+    const auth = req.headers.authorization || "";
+    if (auth.toLowerCase().startsWith("bearer "))
+        return auth.slice(7).trim();
+    const cookies = parseCookies(req.headers.cookie);
+    if (cookies[TOKEN_COOKIE])
+        return cookies[TOKEN_COOKIE];
+    if (url && url.searchParams.get("token"))
+        return String(url.searchParams.get("token"));
+    const h = req.headers["x-northstar-token"];
+    if (typeof h === "string" && h.trim())
+        return h.trim();
+    return "";
+}
+export function checkToken(req, url, expected) {
+    if (!expected)
+        return true; // 未配置令牌 = 仅回环模式（启动时已强制）
+    const got = extractToken(req, url);
+    return !!got && safeEqual(got, expected);
+}

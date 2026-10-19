@@ -88,6 +88,25 @@ node dist/cli.js export [--out backup.json]
 
 全局参数：`--data <dir>`、`--range-every <n>`。
 
+## 跨设备 / 跨网络
+
+默认只在本机可用（MCP stdio + 127.0.0.1）。跨设备有两种正确做法：
+
+- **Hub 模式（推荐）**：一台常开主机跑服务，其他设备通过 `http://<hub>:8788/mcp`（Bearer 令牌）接入，
+  UI 用 `http://<hub>:8777/?token=...` 打开。跨公网建议 Tailscale / Cloudflare Tunnel / SSH 隧道。
+- **文件同步模式**：`data/` 是纯文件（一条记录一个 JSON、无索引），可放 Syncthing / OneDrive / git；
+  不同轮次天然不冲突；删除不会收敛（无墓碑），强一致编辑请用 Hub。
+
+完整步骤、安全清单与反代示例见 **[docs/REMOTE.md](docs/REMOTE.md)**。
+
+```bash
+# Hub 启动（无令牌绑定非回环地址会被拒绝）
+node dist/server.js --data ./data \
+  --ui-host 0.0.0.0 --ui-port 8777 \
+  --http-host 0.0.0.0 --http-port 8788 \
+  --token <32位以上随机令牌>
+```
+
 ## 配置
 
 `tm.config.json`（项目根，可被 CLI 参数/环境变量覆盖）：
@@ -95,13 +114,14 @@ node dist/cli.js export [--out backup.json]
 | 键 | 默认 | 说明 |
 |---|---|---|
 | `data_dir` | `./data` | 数据目录（相对项目根） |
-| `ui_port` | `8777` | 仅监听 127.0.0.1 |
-| `ui_host` | `127.0.0.1` | 不建议改动 |
+| `ui_host` / `ui_port` | `127.0.0.1` / `8777` | 记忆仓库；非回环需令牌 |
+| `http_host` / `http_port` | `127.0.0.1` / `0` | MCP over HTTP（`/mcp`）；0=关闭 |
+| `auth_token` | 空 | 远程访问令牌，或环境变量 `TM_AUTH_TOKEN` |
 | `range_every` | `10` | 每 N 轮自动生成范围总结 |
 | `recall_max_chars` | `1200` | 注入块预算 |
 | `raw_head` / `raw_tail` | `1200` / `600` | 原文头尾窗口 |
 
-环境变量：`TM_DATA_DIR`、`TM_UI_PORT`、`TM_UI_HOST`、`TM_RANGE_EVERY`。
+环境变量：`TM_DATA_DIR`、`TM_UI_PORT`、`TM_UI_HOST`、`TM_HTTP_PORT`、`TM_HTTP_HOST`、`TM_AUTH_TOKEN`、`TM_RANGE_EVERY`。
 
 ## 数据布局（单一真源，无镜像、无 SQLite）
 

@@ -1,11 +1,13 @@
 #!/usr/bin/env node
-// server.ts — 入口：MCP stdio + 可选 UI HTTP；配置/日志/信号
+// server.ts — 入口：MCP stdio + MCP over HTTP + UI HTTP；配置/日志/信号
 import { loadConfig, PACKAGE_ROOT } from "./config.js";
 import { initLog, logError, logInfo, logWarn } from "./log.js";
 import { RepoStore } from "./store/repo.js";
 import { createTools, INSTRUCTIONS } from "./mcp/tools.js";
 import { startRpcServer } from "./mcp/jsonrpc.js";
+import { startHttpRpcServer } from "./mcp/http.js";
 import { startUiServer } from "./ui/http.js";
+import { isLoopbackHost } from "./auth.js";
 // stdout 是 MCP 协议通道：任何 console.log 一律转 stderr
 console.log = (...args) => console.error(...args);
 function parseArgs(argv) {
@@ -23,8 +25,20 @@ function parseArgs(argv) {
             case "--ui-host":
                 out.uiHost = next();
                 break;
+            case "--http-port":
+                out.httpPort = Number(next());
+                break;
+            case "--http-host":
+                out.httpHost = next();
+                break;
+            case "--token":
+                out.authToken = next();
+                break;
             case "--no-ui":
                 out.noUi = true;
+                break;
+            case "--no-mcp":
+                out.noMcp = true;
                 break;
             case "--ui-only":
                 out.uiOnly = true;
@@ -43,7 +57,16 @@ function parseArgs(argv) {
 }
 const config = loadConfig(parseArgs(process.argv.slice(2)));
 initLog(config.logFile);
-console.error(`[northstar] start | data=${config.dataDir} | ui=${config.noUi ? "off" : `${config.uiHost}:${config.uiPort}`} | mcp=${config.uiOnly ? "off" : "stdio"}`);
+// 安全闸：任何非回环监听都必须有令牌（fail closed）
+const exposeUi = !config.noUi && !isLoopbackHost(config.uiHost);
+const exposeHttp = config.httpPort > 0 && !config.noMcp && !isLoopbackHost(config.httpHost);
+if ((exposeUi || exposeHttp) && !config.authToken) {
+    console.error(`[northstar] 拒绝启动：监听非回环地址（ui=${config.uiHost} http=${config.httpHost}:${config.httpPort}）但未设置令牌。\n` +
+        `请设置 TM_AUTH_TOKEN 或 --token <随机字符串> 后重试。`);
+    process.exit(1);
+}
+console.error(`[northstar] start | data=${config.dataDir} | ui=${config.noUi ? "off" : `${config.uiHost}:${config.uiPort}`} | ` +
+    `mcp=${config.uiOnly ? "off" : "stdio"} | http-mcp=${config.httpPort ? `${config.httpHost}:${config.httpPort}/mcp` : "off"} | auth=${config.authToken ? "on" : "off"}`);
 console.error(`[northstar] package root: ${PACKAGE_ROOT}`);
 const repo = new RepoStore({
     dataDir: config.dataDir,
@@ -52,13 +75,14 @@ const repo = new RepoStore({
     rawTail: config.rawTail,
 });
 repo.open();
-let uiServer;
+const tools = createTools(repo, config);
+const servers = [];
 if (!config.noUi) {
     startUiServer(repo, config)
         .then(({ server, port }) => {
-        uiServer = server;
+        servers.push(server);
         const url = `http://${config.uiHost}:${port}`;
-        console.error(`[northstar] UI ready: ${url}`);
+        console.error(`[northstar] UI ready: ${url}${config.authToken ? "/?token=<TM_AUTH_TOKEN>" : ""}`);
         logInfo(`ui ready ${url}`);
     })
         .catch((e) => {
@@ -66,8 +90,25 @@ if (!config.noUi) {
         console.error(`[northstar] UI failed (MCP continues): ${e && e.message}`);
     });
 }
-if (!config.uiOnly) {
-    const tools = createTools(repo, config);
+if (config.httpPort > 0 && !config.noMcp) {
+    startHttpRpcServer({
+        serverName: "northstar-memory",
+        serverVersion: "2.0.0",
+        instructions: INSTRUCTIONS,
+        tools: tools.defs,
+        callTool: tools.callTool,
+        authToken: config.authToken,
+    }, config.httpHost, config.httpPort)
+        .then(({ server, port }) => {
+        servers.push(server);
+        console.error(`[northstar] HTTP MCP ready: http://${config.httpHost}:${port}/mcp${config.authToken ? " (bearer token required)" : ""}`);
+    })
+        .catch((e) => {
+        logError(`http mcp failed to start: ${e && e.message}`);
+        console.error(`[northstar] HTTP MCP failed: ${e && e.message}`);
+    });
+}
+if (!config.uiOnly && !config.noMcp) {
     startRpcServer({
         serverName: "northstar-memory",
         serverVersion: "2.0.0",
@@ -75,25 +116,31 @@ if (!config.uiOnly) {
         tools: tools.defs,
         callTool: tools.callTool,
         onShutdown: () => {
-            try {
-                uiServer?.close();
-            }
-            catch {
-                /* ignore */
+            for (const s of servers) {
+                try {
+                    s.close();
+                }
+                catch {
+                    /* ignore */
+                }
             }
         },
     });
 }
-else {
-    // 仅 UI 模式：保持进程存活
-    process.on("SIGINT", () => {
-        uiServer?.close();
+else if (!config.noUi || config.httpPort > 0) {
+    const stop = () => {
+        for (const s of servers) {
+            try {
+                s.close();
+            }
+            catch {
+                /* ignore */
+            }
+        }
         process.exit(0);
-    });
-    process.on("SIGTERM", () => {
-        uiServer?.close();
-        process.exit(0);
-    });
+    };
+    process.on("SIGINT", stop);
+    process.on("SIGTERM", stop);
 }
 process.on("uncaughtException", e => logError("uncaughtException", e && e.stack ? e.stack : String(e)));
 process.on("unhandledRejection", e => logError("unhandledRejection", e && e.stack ? e.stack : String(e)));
