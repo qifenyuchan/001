@@ -1,7 +1,7 @@
 # GitHub AI 记忆生态扫描（2026-10）
 
 > 由 `research/github_scan.py` + `research/render_github_report.py` 自动生成。
-> 通过 GitHub 搜索 API 扫 14 组关键词（每组最多 100 条，按 star 排序），去重后 1073 个仓库，收紧相关性后 **578 个**。
+> 通过 GitHub 搜索 API 扫 22 组关键词（每组最多 100 条，按 star 排序），去重后 1603 个仓库，收紧相关性后 **693 个**。
 
 ## 口径与局限
 
@@ -15,62 +15,62 @@
 
 | 类别 | 数量 |
 |---|---|
-| MCP 服务器 | 199 |
-| 记忆层/API/SDK | 139 |
-| 其他 | 135 |
-| 本地优先/PKM | 130 |
-| 图/时序/认知架构 | 125 |
-| 编码 Agent 记忆 | 124 |
-| 上下文/工具输出优化 | 58 |
-| 评测/论文/清单 | 42 |
-| 团队/企业记忆 | 27 |
-| 记忆 OS/平台 | 24 |
+| MCP 服务器 | 239 |
+| 本地优先/PKM | 169 |
+| 其他 | 162 |
+| 编码 Agent 记忆 | 161 |
+| 记忆层/API/SDK | 156 |
+| 图/时序/认知架构 | 140 |
+| 上下文/工具输出优化 | 73 |
+| 评测/论文/清单 | 51 |
+| 团队/企业记忆 | 35 |
+| 记忆 OS/平台 | 28 |
 
 ## 功能词频（描述 + topics；README 未计入）
 
 | 功能 | 命中 | 占比 |
 |---|---|---|
-| 语义/向量/混合检索 | 254 | 43% |
-| MCP | 199 | 34% |
-| 记忆类型(情景/语义/程序) | 104 | 17% |
-| 知识图谱/实体关系 | 96 | 16% |
-| 遗忘/衰减/TTL | 92 | 15% |
-| 巩固/反思/睡眠计算 | 89 | 15% |
-| 本地优先/离线 | 77 | 13% |
-| 用户画像/偏好 | 55 | 9% |
-| 可编辑/可读文件 | 43 | 7% |
-| 评测/基准 | 41 | 7% |
-| 上下文预算/压缩 | 27 | 4% |
-| 多用户/租户/ACL | 26 | 4% |
-| 结构化字段/schema | 26 | 4% |
-| 时间感知/事实有效期 | 22 | 3% |
+| 语义/向量/混合检索 | 296 | 42% |
+| MCP | 239 | 34% |
+| 知识图谱/实体关系 | 110 | 15% |
+| 记忆类型(情景/语义/程序) | 107 | 15% |
+| 本地优先/离线 | 104 | 15% |
+| 巩固/反思/睡眠计算 | 98 | 14% |
+| 遗忘/衰减/TTL | 97 | 13% |
+| 用户画像/偏好 | 68 | 9% |
+| 可编辑/可读文件 | 52 | 7% |
+| 评测/基准 | 50 | 7% |
+| 上下文预算/压缩 | 50 | 7% |
+| 安全/投毒/注入 | 35 | 5% |
+| 多用户/租户/ACL | 33 | 4% |
+| 结构化字段/schema | 29 | 4% |
+| 时间感知/事实有效期 | 25 | 3% |
+| 导入/导出/迁移 | 19 | 2% |
+| 去重/冲突/矛盾 | 18 | 2% |
 | 空间/记忆宫殿 | 15 | 2% |
 | 重要性/评分/排序 | 14 | 2% |
-| 导入/导出/迁移 | 14 | 2% |
-| 去重/冲突/矛盾 | 13 | 2% |
-| 安全/投毒/注入 | 11 | 1% |
-| 代码库记忆 | 9 | 1% |
-| 加密/E2E | 8 | 1% |
+| 代码库记忆 | 11 | 1% |
+| 加密/E2E | 9 | 1% |
 
 ## Star Top 100
 
 | # | 仓库 | Stars | 语言 | 更新 | 类别 | 说明 |
 |---|---|---|---|---|---|---|
 | 1 | [mem0ai/mem0](https://github.com/mem0ai/mem0) | 67457 | Python | 2026-10-19 | 记忆层/API/SDK | The Memory Layer for AI Agents - Drop-in memory infrastructure for AI agents and apps. Context that persists. Built for  |
-| 2 | [MemPalace/mempalace](https://github.com/MemPalace/mempalace) | 59642 | Python | 2026-10-19 | 评测/论文/清单/MCP 服务器 | The best-benchmarked open-source AI memory system. And it's free. |
-| 3 | [vectorize-io/hindsight](https://github.com/vectorize-io/hindsight) | 51597 | Python | 2026-10-19 | 其他 | Hindsight: Agent Memory That Learns |
+| 2 | [MemPalace/mempalace](https://github.com/MemPalace/mempalace) | 59643 | Python | 2026-10-19 | 评测/论文/清单/MCP 服务器 | The best-benchmarked open-source AI memory system. And it's free. |
+| 3 | [vectorize-io/hindsight](https://github.com/vectorize-io/hindsight) | 51598 | Python | 2026-10-19 | 其他 | Hindsight: Agent Memory That Learns |
 | 4 | [volcengine/OpenViking](https://github.com/volcengine/OpenViking) | 40343 | Python | 2026-10-19 | 记忆 OS/平台 | Self-evolving Context Database for AI Agents. Unify Agent Memory, Knowledge RAG and Skills. |
-| 5 | [topoteretes/cognee](https://github.com/topoteretes/cognee) | 32545 | Python | 2026-10-19 | 图/时序/认知架构/记忆 OS/平台 | Cognee is the open-source AI memory platform for agents. Give your AI agents persistent long-term memory with small mode |
+| 5 | [topoteretes/cognee](https://github.com/topoteretes/cognee) | 32546 | Python | 2026-10-19 | 图/时序/认知架构/记忆 OS/平台 | Cognee is the open-source AI memory platform for agents. Give your AI agents persistent long-term memory with small mode |
 | 6 | [supermemoryai/supermemory](https://github.com/supermemoryai/supermemory) | 31314 | TypeScript | 2026-10-19 | 记忆层/API/SDK | Memory and context engine + app that is extremely fast, scalable, and can be run fully locally. The Memory API for the A |
-| 7 | [mksglu/context-mode](https://github.com/mksglu/context-mode) | 31012 | TypeScript | 2026-10-19 | MCP 服务器/编码 Agent 记忆/上下文/工具输出优化 | Context window optimization for AI coding agents. Sandboxes tool output (98% reduction), persists session memory, and    |
-| 8 | [rohitg00/agentmemory](https://github.com/rohitg00/agentmemory) | 29683 | TypeScript | 2026-10-19 | 评测/论文/清单/编码 Agent 记忆 | #1 Persistent memory for AI coding agents based on real-world benchmarks |
+| 7 | [mksglu/context-mode](https://github.com/mksglu/context-mode) | 31014 | TypeScript | 2026-10-19 | MCP 服务器/编码 Agent 记忆/上下文/工具输出优化 | Context window optimization for AI coding agents. Sandboxes tool output (98% reduction), persists session memory, and    |
+| 8 | [rohitg00/agentmemory](https://github.com/rohitg00/agentmemory) | 29684 | TypeScript | 2026-10-19 | 评测/论文/清单/编码 Agent 记忆 | #1 Persistent memory for AI coding agents based on real-world benchmarks |
 | 9 | [TencentCloud/TencentDB-Agent-Memory](https://github.com/TencentCloud/TencentDB-Agent-Memory) | 29631 | TypeScript | 2026-10-19 | 本地优先/PKM/团队/企业记忆/记忆 OS/平台/记忆层/API/SDK | TencentDB Agent Memory is a team-level memory hub for AI Agents — turning conversations, docs, and code into four reusab |
 | 10 | [memvid/memvid](https://github.com/memvid/memvid) | 16604 | Rust | 2026-10-19 | 本地优先/PKM/记忆层/API/SDK | Memory layer for AI Agents. Replace complex RAG pipelines with a serverless, single-file memory layer. Give your agents  |
 | 11 | [EverMind-AI/EverOS](https://github.com/EverMind-AI/EverOS) | 13503 | Python | 2026-10-19 | MCP 服务器/本地优先/PKM/记忆 OS/平台/记忆层/API/SDK | One portable memory layer for every AI agent: local-first, Markdown-native, user-owned, and self-evolving across apps, t |
 | 12 | [MemTensor/MemOS](https://github.com/MemTensor/MemOS) | 11939 | TypeScript | 2026-10-19 | MCP 服务器/记忆 OS/平台 | Self-evolving memory OS for LLM & AI Agents: ultra-persistent memory, hybrid-retrieval, and cross-task skill reuse, with |
-| 13 | [akitaonrails/ai-memory](https://github.com/akitaonrails/ai-memory) | 11117 | Rust | 2026-10-19 | 其他 | Solution for long term memory for agent coding CLIs and to facilitate handoff between different agent vendors |
+| 13 | [akitaonrails/ai-memory](https://github.com/akitaonrails/ai-memory) | 11124 | Rust | 2026-10-19 | 其他 | Solution for long term memory for agent coding CLIs and to facilitate handoff between different agent vendors |
 | 14 | [StarTrail-org/PixelRAG](https://github.com/StarTrail-org/PixelRAG) | 10312 | Python | 2026-10-19 | 其他 | https://arxiv.org/abs/2606.28344. The end of web parsing. The beginning of scalable pixel-native search. link: https://p |
-| 15 | [xerj-org/xerj](https://github.com/xerj-org/xerj) | 9383 | Rust | 2026-10-19 | 其他 | XERJ is the new way for AI to search data. Its autoindex capability activates agents to know your data without the token |
+| 15 | [xerj-org/xerj](https://github.com/xerj-org/xerj) | 9487 | Rust | 2026-10-19 | 其他 | XERJ is the new way for AI to search data. Its autoindex capability activates agents to know your data without the token |
 | 16 | [activeloopai/deeplake](https://github.com/activeloopai/deeplake) | 9253 | C++ | 2026-10-17 | 其他 | Deeplake is AI Data Runtime for Agents. It provides serverless postgres with a multimodal datalake, enabling scalable re |
 | 17 | [osaurus-ai/osaurus](https://github.com/osaurus-ai/osaurus) | 8056 | Swift | 2026-10-19 | MCP 服务器/本地优先/PKM | Own your AI. The native macOS harness for AI agents -- any model, persistent memory, autonomous execution, cryptographic |
 | 18 | [Gentleman-Programming/gentle-ai](https://github.com/Gentleman-Programming/gentle-ai) | 7861 | Go | 2026-10-19 | MCP 服务器/编码 Agent 记忆 | Gentle-AI configures the AI coding agents you already use: Claude Code, Cursor, OpenCode, Codex, Pi, and more. Choose pe |
@@ -123,39 +123,39 @@
 | 65 | [vshulcz/deja-vu](https://github.com/vshulcz/deja-vu) | 1252 | Go | 2026-10-19 | MCP 服务器/编码 Agent 记忆 | Coding agent memory for Claude Code, Codex, Cursor and 39 more, built from the session history already on your disk. Loc |
 | 66 | [agiresearch/A-mem](https://github.com/agiresearch/A-mem) | 1204 | Python | 2026-10-18 | 其他 | A-MEM: Agentic Memory for LLM Agents |
 | 67 | [Mibayy/token-savior](https://github.com/Mibayy/token-savior) | 1182 | Python | 2026-10-17 | 评测/论文/清单/MCP 服务器 | MCP server that gets Claude to 97.9% (188/192) on a real coding benchmark at -80% active tokens and -83% wall time, vs 7 |
-| 68 | [withkynam/vibecode-pro-max-kit](https://github.com/withkynam/vibecode-pro-max-kit) | 1154 | JavaScript | 2026-10-19 | 编码 Agent 记忆/团队/企业记忆 | Your AI forgets. This remembers. Spec-driven coding harness for vibecoders, product owners, CEOs and real builders — sel |
-| 69 | [NirDiamant/Agent_Memory_Techniques](https://github.com/NirDiamant/Agent_Memory_Techniques) | 1111 | Jupyter Notebook | 2026-10-19 | 评测/论文/清单/图/时序/认知架构 | Agent memory for LLMs: 30 runnable Jupyter notebooks covering conversation buffers, vector stores, knowledge graphs, epi |
-| 70 | [lucasrosati/claude-code-memory-setup](https://github.com/lucasrosati/claude-code-memory-setup) | 1034 | Python | 2026-10-19 | 编码 Agent 记忆/图/时序/认知架构/本地优先/PKM | Up to 71.5x fewer tokens per session on Claude Code with Obsidian + Graphify. Persistent memory, codebase knowledge grap |
-| 71 | [DasterProkio/awesome-ai-companion](https://github.com/DasterProkio/awesome-ai-companion) | 1021 | HTML | 2026-10-19 | 其他 | Open-source AI companions, desktop pets, long-term memory & proactive chat. 人机恋开源项目大全。让你的家机能够脱离官端自主存在，拥有记忆和主动性。 |
-| 72 | [Rath-Team/OpenRath](https://github.com/Rath-Team/OpenRath) | 963 | Python | 2026-10-14 | 上下文/工具输出优化/记忆层/API/SDK | An open-source, PyTorch-like runtime for dynamic multi-agent and multi-session workflows. |
-| 73 | [CodeAbra/iai-personal-memory-engine](https://github.com/CodeAbra/iai-personal-memory-engine) | 912 | Python | 2026-10-18 | MCP 服务器/编码 Agent 记忆/本地优先/PKM | A cyber brain for your AI. It never forgets a detail, remembers exactly what you said, and learns how you work over time |
-| 74 | [nuwax-ai/nuwax](https://github.com/nuwax-ai/nuwax) | 894 | TypeScript | 2026-10-19 | MCP 服务器/上下文/工具输出优化/团队/企业记忆 | Nuwax Agent OS - An enterprise-grade AI Agent Development and Operation Platform - Providing a complete solution for age |
-| 75 | [shaneholloman/mcp-knowledge-graph](https://github.com/shaneholloman/mcp-knowledge-graph) | 885 | JavaScript | 2026-10-18 | MCP 服务器/图/时序/认知架构 | MCP server enabling persistent memory for Claude through a local knowledge graph - fork focused on local development |
-| 76 | [thedivergentai/Game-Dev-Agentic-Skills](https://github.com/thedivergentai/Game-Dev-Agentic-Skills) | 869 | GDScript | 2026-10-19 | 其他 | Multi-engine long-term memory for game AI agents. Deep Godot 4.7+ (99 skills, 27 genre blueprints) + Bevy docs-first par |
-| 77 | [AVIDS2/memorix](https://github.com/AVIDS2/memorix) | 848 | TypeScript | 2026-10-19 | MCP 服务器/编码 Agent 记忆/本地优先/PKM/记忆层/API/SDK | Open-source cross-agent memory layer for coding agents via MCP. Compatible with Claude Code, Codex, Cursor, Windsurf, Ge |
-| 78 | [SakanaAI/doc-to-lora](https://github.com/SakanaAI/doc-to-lora) | 836 | Python | 2026-10-18 | 其他 | Hypernetworks that update LLMs to remember factual information |
-| 79 | [verygoodplugins/automem](https://github.com/verygoodplugins/automem) | 822 | Python | 2026-10-12 | 其他 | Long-term memory for AI assistants. Graph + vector store that recalls decisions, relationships, and context across sessi |
-| 80 | [AlphaAvatar/AlphaAvatar](https://github.com/AlphaAvatar/AlphaAvatar) | 818 | Python | 2026-10-15 | 其他 | An Omni Real-Time Assistant for Everyone |
-| 81 | [rahilp/second-brain-cloudflare](https://github.com/rahilp/second-brain-cloudflare) | 813 | TypeScript | 2026-10-19 | MCP 服务器/编码 Agent 记忆/本地优先/PKM/记忆层/API/SDK | One memory layer, every AI tool. Store anything once — recall it in Claude, ChatGPT, Cursor, or any MCP client. Self-hos |
-| 82 | [christopherkarani/Wax](https://github.com/christopherkarani/Wax) | 804 | Swift | 2026-10-07 | MCP 服务器/记忆层/API/SDK | Shared Single-file memory layer for all your agents, sub mili-second RAG over text, photo and video on Apple Silicon.. N |
-| 83 | [supermemoryai/openclaw-supermemory](https://github.com/supermemoryai/openclaw-supermemory) | 797 | TypeScript | 2026-10-13 | 其他 | OpenClaw Supermemory lets to have long-term memory and recall for your openclaw agent. |
-| 84 | [kitfunso/hippo-memory](https://github.com/kitfunso/hippo-memory) | 782 | TypeScript | 2026-10-18 | MCP 服务器/编码 Agent 记忆/本地优先/PKM | Stop re-teaching your agent. Make your agent's memory work like a brain. Hippo is long-term memory for coding agents. It |
-| 85 | [alash3al/stash](https://github.com/alash3al/stash) | 769 | Go | 2026-10-13 | MCP 服务器/记忆层/API/SDK | Stash — persistent memory layer for AI agents. Episodes, facts, and working context stored in Postgres. MCP server inclu |
-| 86 | [raiyanyahya/recall](https://github.com/raiyanyahya/recall) | 761 | Python | 2026-10-19 | 编码 Agent 记忆/本地优先/PKM | Stop wasting tokens and re-explaining your project every session. Recall gives Claude Code , Opencode durable memory — e |
-| 87 | [alvinreal/awesome-openclaw](https://github.com/alvinreal/awesome-openclaw) | 742 | - | 2026-10-15 | 其他 | A curated list of the best OpenClaw resources: official projects, skills, plugins, dashboards, deployment tooling, memor |
-| 88 | [swarmclawai/swarmvault](https://github.com/swarmclawai/swarmvault) | 723 | TypeScript | 2026-10-18 | MCP 服务器/编码 Agent 记忆/图/时序/认知架构/本地优先/PKM | The local-first LLM Wiki: open-source knowledge graph builder, RAG knowledge base, and agent memory store. Built on Andr |
-| 89 | [jaredrhod/ai-memory-vault](https://github.com/jaredrhod/ai-memory-vault) | 713 | - | 2026-10-19 | MCP 服务器/本地优先/PKM | Give your AI a real, persistent memory. The open-source system plus templates that turn an Obsidian vault into your AI's |
-| 90 | [caspianmoon/memoripy](https://github.com/caspianmoon/memoripy) | 694 | Python | 2026-10-06 | MCP 服务器/图/时序/认知架构 | Evidence-first local memory for AI agents with temporal versions, admission policies, citations, explainable recall, MCP |
-| 91 | [swarmclawai/swarmclaw](https://github.com/swarmclawai/swarmclaw) | 693 | TypeScript | 2026-10-19 | MCP 服务器/编码 Agent 记忆/记忆层/API/SDK | Open-source self-hosted AI agent runtime and multi-agent framework for autonomous agent swarms. Agent memory, MCP tools, |
-| 92 | [coleam00/mcp-mem0](https://github.com/coleam00/mcp-mem0) | 685 | Python | 2026-10-19 | MCP 服务器 | MCP server for long term agent memory with Mem0. Also useful as a template to get you started building your own MCP serv |
-| 93 | [adoresever/graph-memory](https://github.com/adoresever/graph-memory) | 655 | TypeScript | 2026-10-18 | 编码 Agent 记忆/图/时序/认知架构 | Deepseek Harness、Openclaw知识图谱记忆插件。2026年4月受邀发布在清华大学讨论会。Knowledge Graph + Memory；Knowledge Graph Context Engine for OpenCl |
-| 94 | [Arvincreator/project-golem](https://github.com/Arvincreator/project-golem) | 642 | JavaScript | 2026-10-18 | 其他 | OS-level autonomous AI agent with long-term memory, multi-agent coordination, Titan Chronos scheduler & Moltbot Social C |
-| 95 | [BruceLanLan/augur](https://github.com/BruceLanLan/augur) | 642 | Python | 2026-10-19 | MCP 服务器/本地优先/PKM | 🦉 Augur — 本地优先的投资研究记忆系统：18 位投资大师独立分析 + 加权共识，证据带时间语义、每次运行可复查，CLI / Dashboard / MCP。A local-first research memory system w |
-| 96 | [mnemon-dev/mnemon](https://github.com/mnemon-dev/mnemon) | 640 | Go | 2026-10-19 | 编码 Agent 记忆/记忆层/API/SDK | LLM-supervised persistent memory for AI agents — graph-based recall, cross-session knowledge, single binary. Works with  |
-| 97 | [matrixorigin/memoria](https://github.com/matrixorigin/memoria) | 614 | Rust | 2026-10-19 | 其他 | Secure memory management for AI Agents • Ensures data integrity • Reduces hallucinations • Maintains consistent long-ter |
-| 98 | [24kchengYe/MemoMind](https://github.com/24kchengYe/MemoMind) | 604 | Python | 2026-10-17 | MCP 服务器/编码 Agent 记忆/本地优先/PKM | Give your AI agent a brain that remembers. Local memory system for Claude Code — 100% private, GPU-accelerated, zero clo |
-| 99 | [Haozhe-Xing/agent_learning](https://github.com/Haozhe-Xing/agent_learning) | 603 | HTML | 2026-10-19 | MCP 服务器 | A systematic AI Agent development tutorial covering LLM agents, RAG, tool use, memory systems, multi-agent systems, Lang |
-| 100 | [neo4j-labs/agent-memory](https://github.com/neo4j-labs/agent-memory) | 587 | Python | 2026-10-19 | 图/时序/认知架构 | A graph-native memory system for AI agents and context graphs. Store conversations, build knowledge graphs, and let your |
+| 68 | [agentrq/agentrq](https://github.com/agentrq/agentrq) | 1162 | Go | 2026-10-19 | MCP 服务器 | AgentRQ: Human-in-loop realtime conversational task manager for AI Agents. Self-hosted! Control your own agents from whe |
+| 69 | [withkynam/vibecode-pro-max-kit](https://github.com/withkynam/vibecode-pro-max-kit) | 1154 | JavaScript | 2026-10-19 | 编码 Agent 记忆/团队/企业记忆 | Your AI forgets. This remembers. Spec-driven coding harness for vibecoders, product owners, CEOs and real builders — sel |
+| 70 | [NirDiamant/Agent_Memory_Techniques](https://github.com/NirDiamant/Agent_Memory_Techniques) | 1111 | Jupyter Notebook | 2026-10-19 | 评测/论文/清单/图/时序/认知架构 | Agent memory for LLMs: 30 runnable Jupyter notebooks covering conversation buffers, vector stores, knowledge graphs, epi |
+| 71 | [lucasrosati/claude-code-memory-setup](https://github.com/lucasrosati/claude-code-memory-setup) | 1034 | Python | 2026-10-19 | 编码 Agent 记忆/图/时序/认知架构/本地优先/PKM | Up to 71.5x fewer tokens per session on Claude Code with Obsidian + Graphify. Persistent memory, codebase knowledge grap |
+| 72 | [DasterProkio/awesome-ai-companion](https://github.com/DasterProkio/awesome-ai-companion) | 1021 | HTML | 2026-10-19 | 其他 | Open-source AI companions, desktop pets, long-term memory & proactive chat. 人机恋开源项目大全。让你的家机能够脱离官端自主存在，拥有记忆和主动性。 |
+| 73 | [Rath-Team/OpenRath](https://github.com/Rath-Team/OpenRath) | 963 | Python | 2026-10-14 | 上下文/工具输出优化/记忆层/API/SDK | An open-source, PyTorch-like runtime for dynamic multi-agent and multi-session workflows. |
+| 74 | [CodeAbra/iai-personal-memory-engine](https://github.com/CodeAbra/iai-personal-memory-engine) | 912 | Python | 2026-10-18 | MCP 服务器/编码 Agent 记忆/本地优先/PKM | A cyber brain for your AI. It never forgets a detail, remembers exactly what you said, and learns how you work over time |
+| 75 | [openmemind/memind](https://github.com/openmemind/memind) | 899 | Java | 2026-10-13 | 图/时序/认知架构/记忆 OS/平台 | Self-evolving cognitive memory and context engine for AI agents in Java. Empowering 24/7 proactive agents like OpenClaw  |
+| 76 | [nuwax-ai/nuwax](https://github.com/nuwax-ai/nuwax) | 894 | TypeScript | 2026-10-19 | MCP 服务器/上下文/工具输出优化/团队/企业记忆 | Nuwax Agent OS - An enterprise-grade AI Agent Development and Operation Platform - Providing a complete solution for age |
+| 77 | [topoteretes/awesome-ai-memory](https://github.com/topoteretes/awesome-ai-memory) | 891 | Python | 2026-10-19 | 其他 | A list of AI memory projects |
+| 78 | [shaneholloman/mcp-knowledge-graph](https://github.com/shaneholloman/mcp-knowledge-graph) | 885 | JavaScript | 2026-10-18 | MCP 服务器/图/时序/认知架构 | MCP server enabling persistent memory for Claude through a local knowledge graph - fork focused on local development |
+| 79 | [thedivergentai/Game-Dev-Agentic-Skills](https://github.com/thedivergentai/Game-Dev-Agentic-Skills) | 869 | GDScript | 2026-10-19 | 其他 | Multi-engine long-term memory for game AI agents. Deep Godot 4.7+ (99 skills, 27 genre blueprints) + Bevy docs-first par |
+| 80 | [AVIDS2/memorix](https://github.com/AVIDS2/memorix) | 848 | TypeScript | 2026-10-19 | MCP 服务器/编码 Agent 记忆/本地优先/PKM/记忆层/API/SDK | Open-source cross-agent memory layer for coding agents via MCP. Compatible with Claude Code, Codex, Cursor, Windsurf, Ge |
+| 81 | [SakanaAI/doc-to-lora](https://github.com/SakanaAI/doc-to-lora) | 836 | Python | 2026-10-18 | 其他 | Hypernetworks that update LLMs to remember factual information |
+| 82 | [verygoodplugins/automem](https://github.com/verygoodplugins/automem) | 822 | Python | 2026-10-12 | 其他 | Long-term memory for AI assistants. Graph + vector store that recalls decisions, relationships, and context across sessi |
+| 83 | [AlphaAvatar/AlphaAvatar](https://github.com/AlphaAvatar/AlphaAvatar) | 818 | Python | 2026-10-15 | 其他 | An Omni Real-Time Assistant for Everyone |
+| 84 | [rahilp/second-brain-cloudflare](https://github.com/rahilp/second-brain-cloudflare) | 813 | TypeScript | 2026-10-19 | MCP 服务器/编码 Agent 记忆/本地优先/PKM/记忆层/API/SDK | One memory layer, every AI tool. Store anything once — recall it in Claude, ChatGPT, Cursor, or any MCP client. Self-hos |
+| 85 | [christopherkarani/Wax](https://github.com/christopherkarani/Wax) | 804 | Swift | 2026-10-07 | MCP 服务器/记忆层/API/SDK | Shared Single-file memory layer for all your agents, sub mili-second RAG over text, photo and video on Apple Silicon.. N |
+| 86 | [supermemoryai/openclaw-supermemory](https://github.com/supermemoryai/openclaw-supermemory) | 797 | TypeScript | 2026-10-13 | 其他 | OpenClaw Supermemory lets to have long-term memory and recall for your openclaw agent. |
+| 87 | [kitfunso/hippo-memory](https://github.com/kitfunso/hippo-memory) | 782 | TypeScript | 2026-10-18 | MCP 服务器/编码 Agent 记忆/本地优先/PKM | Stop re-teaching your agent. Make your agent's memory work like a brain. Hippo is long-term memory for coding agents. It |
+| 88 | [alash3al/stash](https://github.com/alash3al/stash) | 769 | Go | 2026-10-13 | MCP 服务器/记忆层/API/SDK | Stash — persistent memory layer for AI agents. Episodes, facts, and working context stored in Postgres. MCP server inclu |
+| 89 | [raiyanyahya/recall](https://github.com/raiyanyahya/recall) | 761 | Python | 2026-10-19 | 编码 Agent 记忆/本地优先/PKM | Stop wasting tokens and re-explaining your project every session. Recall gives Claude Code , Opencode durable memory — e |
+| 90 | [alvinreal/awesome-openclaw](https://github.com/alvinreal/awesome-openclaw) | 742 | - | 2026-10-15 | 其他 | A curated list of the best OpenClaw resources: official projects, skills, plugins, dashboards, deployment tooling, memor |
+| 91 | [swarmclawai/swarmvault](https://github.com/swarmclawai/swarmvault) | 723 | TypeScript | 2026-10-18 | MCP 服务器/编码 Agent 记忆/图/时序/认知架构/本地优先/PKM | The local-first LLM Wiki: open-source knowledge graph builder, RAG knowledge base, and agent memory store. Built on Andr |
+| 92 | [jaredrhod/ai-memory-vault](https://github.com/jaredrhod/ai-memory-vault) | 713 | - | 2026-10-19 | MCP 服务器/本地优先/PKM | Give your AI a real, persistent memory. The open-source system plus templates that turn an Obsidian vault into your AI's |
+| 93 | [caspianmoon/memoripy](https://github.com/caspianmoon/memoripy) | 694 | Python | 2026-10-06 | MCP 服务器/图/时序/认知架构 | Evidence-first local memory for AI agents with temporal versions, admission policies, citations, explainable recall, MCP |
+| 94 | [swarmclawai/swarmclaw](https://github.com/swarmclawai/swarmclaw) | 693 | TypeScript | 2026-10-19 | MCP 服务器/编码 Agent 记忆/记忆层/API/SDK | Open-source self-hosted AI agent runtime and multi-agent framework for autonomous agent swarms. Agent memory, MCP tools, |
+| 95 | [coleam00/mcp-mem0](https://github.com/coleam00/mcp-mem0) | 685 | Python | 2026-10-19 | MCP 服务器 | MCP server for long term agent memory with Mem0. Also useful as a template to get you started building your own MCP serv |
+| 96 | [adoresever/graph-memory](https://github.com/adoresever/graph-memory) | 655 | TypeScript | 2026-10-18 | 编码 Agent 记忆/图/时序/认知架构 | Deepseek Harness、Openclaw知识图谱记忆插件。2026年4月受邀发布在清华大学讨论会。Knowledge Graph + Memory；Knowledge Graph Context Engine for OpenCl |
+| 97 | [Arvincreator/project-golem](https://github.com/Arvincreator/project-golem) | 642 | JavaScript | 2026-10-18 | 其他 | OS-level autonomous AI agent with long-term memory, multi-agent coordination, Titan Chronos scheduler & Moltbot Social C |
+| 98 | [BruceLanLan/augur](https://github.com/BruceLanLan/augur) | 642 | Python | 2026-10-19 | MCP 服务器/本地优先/PKM | 🦉 Augur — 本地优先的投资研究记忆系统：18 位投资大师独立分析 + 加权共识，证据带时间语义、每次运行可复查，CLI / Dashboard / MCP。A local-first research memory system w |
+| 99 | [mnemon-dev/mnemon](https://github.com/mnemon-dev/mnemon) | 640 | Go | 2026-10-19 | 编码 Agent 记忆/记忆层/API/SDK | LLM-supervised persistent memory for AI agents — graph-based recall, cross-session knowledge, single binary. Works with  |
+| 100 | [matrixorigin/memoria](https://github.com/matrixorigin/memoria) | 614 | Rust | 2026-10-19 | 其他 | Secure memory management for AI Agents • Ensures data integrity • Reduces hallucinations • Maintains consistent long-ter |
 
 ## 上一份调研没覆盖、但值得看的项目
 
@@ -163,17 +163,17 @@
 
 | 仓库 | Stars | 类别 | 说明 |
 |---|---|---|---|
-| [MemPalace/mempalace](https://github.com/MemPalace/mempalace) | 59642 | 评测/论文/清单/MCP 服务器 | The best-benchmarked open-source AI memory system. And it's free. |
+| [MemPalace/mempalace](https://github.com/MemPalace/mempalace) | 59643 | 评测/论文/清单/MCP 服务器 | The best-benchmarked open-source AI memory system. And it's free. |
 | [volcengine/OpenViking](https://github.com/volcengine/OpenViking) | 40343 | 记忆 OS/平台 | Self-evolving Context Database for AI Agents. Unify Agent Memory, Knowledge RAG and Skills. |
-| [mksglu/context-mode](https://github.com/mksglu/context-mode) | 31012 | MCP 服务器/编码 Agent 记忆/上下文/工具输出优化 | Context window optimization for AI coding agents. Sandboxes tool output (98% reduction), persists session memo |
-| [rohitg00/agentmemory](https://github.com/rohitg00/agentmemory) | 29683 | 评测/论文/清单/编码 Agent 记忆 | #1 Persistent memory for AI coding agents based on real-world benchmarks |
+| [mksglu/context-mode](https://github.com/mksglu/context-mode) | 31014 | MCP 服务器/编码 Agent 记忆/上下文/工具输出优化 | Context window optimization for AI coding agents. Sandboxes tool output (98% reduction), persists session memo |
+| [rohitg00/agentmemory](https://github.com/rohitg00/agentmemory) | 29684 | 评测/论文/清单/编码 Agent 记忆 | #1 Persistent memory for AI coding agents based on real-world benchmarks |
 | [TencentCloud/TencentDB-Agent-Memory](https://github.com/TencentCloud/TencentDB-Agent-Memory) | 29631 | 本地优先/PKM/团队/企业记忆/记忆 OS/平台/记忆层/API/SDK | TencentDB Agent Memory is a team-level memory hub for AI Agents — turning conversations, docs, and code into f |
 | [memvid/memvid](https://github.com/memvid/memvid) | 16604 | 本地优先/PKM/记忆层/API/SDK | Memory layer for AI Agents. Replace complex RAG pipelines with a serverless, single-file memory layer. Give yo |
 | [EverMind-AI/EverOS](https://github.com/EverMind-AI/EverOS) | 13503 | MCP 服务器/本地优先/PKM/记忆 OS/平台/记忆层/API/SDK | One portable memory layer for every AI agent: local-first, Markdown-native, user-owned, and self-evolving acro |
 | [MemTensor/MemOS](https://github.com/MemTensor/MemOS) | 11939 | MCP 服务器/记忆 OS/平台 | Self-evolving memory OS for LLM & AI Agents: ultra-persistent memory, hybrid-retrieval, and cross-task skill r |
-| [akitaonrails/ai-memory](https://github.com/akitaonrails/ai-memory) | 11117 | 其他 | Solution for long term memory for agent coding CLIs and to facilitate handoff between different agent vendors |
+| [akitaonrails/ai-memory](https://github.com/akitaonrails/ai-memory) | 11124 | 其他 | Solution for long term memory for agent coding CLIs and to facilitate handoff between different agent vendors |
 | [StarTrail-org/PixelRAG](https://github.com/StarTrail-org/PixelRAG) | 10312 | 其他 | https://arxiv.org/abs/2606.28344. The end of web parsing. The beginning of scalable pixel-native search. link: |
-| [xerj-org/xerj](https://github.com/xerj-org/xerj) | 9383 | 其他 | XERJ is the new way for AI to search data. Its autoindex capability activates agents to know your data without |
+| [xerj-org/xerj](https://github.com/xerj-org/xerj) | 9487 | 其他 | XERJ is the new way for AI to search data. Its autoindex capability activates agents to know your data without |
 | [activeloopai/deeplake](https://github.com/activeloopai/deeplake) | 9253 | 其他 | Deeplake is AI Data Runtime for Agents. It provides serverless postgres with a multimodal datalake, enabling s |
 | [osaurus-ai/osaurus](https://github.com/osaurus-ai/osaurus) | 8056 | MCP 服务器/本地优先/PKM | Own your AI. The native macOS harness for AI agents -- any model, persistent memory, autonomous execution, cry |
 | [Gentleman-Programming/gentle-ai](https://github.com/Gentleman-Programming/gentle-ai) | 7861 | MCP 服务器/编码 Agent 记忆 | Gentle-AI configures the AI coding agents you already use: Claude Code, Cursor, OpenCode, Codex, Pi, and more. |
@@ -221,7 +221,10 @@
 | [atomicstrata/atomicmemory](https://github.com/atomicstrata/atomicmemory) | 439 | MCP 服务器/本地优先/PKM/记忆层/API/SDK | Portable semantic memory for AI agents: core engine, TypeScript SDK, framework adapters, MCP server, CLI, and  |
 | [Lyellr88/marm-memory](https://github.com/Lyellr88/marm-memory) | 422 | MCP 服务器/编码 Agent 记忆/本地优先/PKM/记忆层/API/SDK | Local-first 3-in-1 AI memory layer & MCP server for Claude Code, Codex, Grok, Gemini, VS Code and Cursor. Fuse |
 | [Goldentrii/AgentRecall-X](https://github.com/Goldentrii/AgentRecall-X) | 371 | MCP 服务器/记忆层/API/SDK | Correction-first persistent memory for AI agents. MCP server + SDK + CLI. Compounds across sessions. |
+| [abraxas914/VESTI](https://github.com/abraxas914/VESTI) | 361 | 本地优先/PKM/记忆 OS/平台/记忆层/API/SDK | Local-first AI conversation memory hub to capture, search, summarize, and export chats across major AI platfor |
+| [DEEP-PolyU/Awesome-GraphMemory](https://github.com/DEEP-PolyU/Awesome-GraphMemory) | 358 | 评测/论文/清单 | A survey of Graph-based Agent Memory / A curated list of resources (surveys, papers, benchmarks, and opensourc |
 | [JordyZomer/lemmalog](https://github.com/JordyZomer/lemmalog) | 340 | MCP 服务器 | A Datalog engine for LLM agent memory: stratified rules, provenance-tracked facts, incremental derivation, and |
+| [LucieEveille/kiwi-mem](https://github.com/LucieEveille/kiwi-mem) | 339 | MCP 服务器 | 🥝 Self-hosted memory gateway for AI companions — OpenAI-compatible proxy with vector search, memory heat, Drea |
 | [supermemoryai/memorybench](https://github.com/supermemoryai/memorybench) | 330 | 评测/论文/清单/记忆层/API/SDK | Unified benchmark for evaluating conversational memory and RAG across multiple datasets |
 | [Prompthon-IO/agent-systems-handbook](https://github.com/Prompthon-IO/agent-systems-handbook) | 316 | 评测/论文/清单/MCP 服务器/上下文/工具输出优化/记忆层/API/SDK | A practical AI agents handbook covering agent systems, agentic workflows, LangGraph, MCP/A2A, context engineer |
 | [AGI-is-going-to-arrive/Memory-Palace](https://github.com/AGI-is-going-to-arrive/Memory-Palace) | 315 | 图/时序/认知架构/记忆 OS/平台 | Memory Palace is a long-term memory operating system purpose-built for AI Agents. |
@@ -230,24 +233,21 @@
 | [timgordontg/engrim](https://github.com/timgordontg/engrim) | 299 | MCP 服务器/编码 Agent 记忆/本地优先/PKM | The Universal Cross-Model Episodic Memory Standard. Local-first, project-scoped SQLite engine for Google Antig |
 | [molyswu/hand_detection](https://github.com/molyswu/hand_detection) | 284 | 评测/论文/清单/记忆层/API/SDK | using Neural Networks (SSD) on Tensorflow.  This repo documents steps and scripts used to train a hand detecto |
 | [xuiltul/animaworks](https://github.com/xuiltul/animaworks) | 267 | 编码 Agent 记忆/团队/企业记忆/记忆层/API/SDK | Organization-as-Code for autonomous AI agents. Brain-inspired memory that grows, consolidates, and forgets. Mu |
+| [ramakay/claude-self-reflect](https://github.com/ramakay/claude-self-reflect) | 227 | MCP 服务器 | Claude forgets everything. This fixes that. 🔗 www.npmjs.com/package/claude-self-reflect |
 | [aouicher/graphmind](https://github.com/aouicher/graphmind) | 216 | MCP 服务器/编码 Agent 记忆/图/时序/认知架构/本地优先/PKM | Local-first code intelligence for AI assistants. Turns your codebase into a knowledge graph your AI can query, |
 | [nemori-ai/nemori](https://github.com/nemori-ai/nemori) | 213 | 评测/论文/清单/记忆层/API/SDK | A minimalist MVP demonstrating a simple yet profound insight: aligning AI memory with human episodic memory gr |
+| [alibaizhanov/mengram](https://github.com/alibaizhanov/mengram) | 204 | MCP 服务器/编码 Agent 记忆/图/时序/认知架构 | Human-like memory for AI agents — semantic, episodic & procedural. Experience-driven procedures that learn fro |
 | [Siddhant-K-code/distill](https://github.com/Siddhant-K-code/distill) | 196 | 其他 | Context intelligence layer for LLM agents: persistent memory with write-time dedup, sensitivity tagging, confl |
 | [TiMEM-AI/TiMEM](https://github.com/TiMEM-AI/TiMEM) | 186 | 图/时序/认知架构 | Temporal-Hierarchical Memory Consolidation for Long-Horizon Conversational Agents |
+| [MemTensor/HaluMem](https://github.com/MemTensor/HaluMem) | 176 | 评测/论文/清单 | HaluMem is the first operation level hallucination evaluation benchmark tailored to agent memory systems. |
+| [Herricka/RecallWeave](https://github.com/Herricka/RecallWeave) | 175 | 上下文/工具输出优化/本地优先/PKM | Local-first agent memory lifecycle engine: typed memories in an append-only, hash-chained log with dedupe, con |
 | [ourmem/omem](https://github.com/ourmem/omem) | 173 | MCP 服务器/编码 Agent 记忆/团队/企业记忆 | Shared Memory That Never Forgets — persistent memory for AI agents with Space-based sharing across agents and  |
+| [tercumantanumut/selene](https://github.com/tercumantanumut/selene) | 172 | MCP 服务器/编码 Agent 记忆 | Selene is a desktop app that runs AI agents on your machine. Connect them to your WhatsApp, Telegram, Slack, o |
 | [swapnildahiphale/OpenSRE](https://github.com/swapnildahiphale/OpenSRE) | 164 | 图/时序/认知架构/团队/企业记忆 | OpenSRE — the memory-first AI SRE. Self-hosted incident investigation with episodic memory, knowledge graph, w |
 | [slow-stack/mneme](https://github.com/slow-stack/mneme) | 162 | MCP 服务器/编码 Agent 记忆/本地优先/PKM | 🧠 The memory that dreams — cross-session memory for DeepSeek Harness. Local SQLite + Markdown mirrors, autoDre |
 | [memoket/memoket-kite](https://github.com/memoket/memoket-kite) | 161 | 评测/论文/清单 | An open-source, vector-free long-term memory engine for AI agents, achieving SOTA on LoCoMo and LongMemEval wi |
+| [mohammadtavakoli78/BEAM](https://github.com/mohammadtavakoli78/BEAM) | 160 | 评测/论文/清单/记忆层/API/SDK | [ICLR 2026] Beyond a Million Tokens: Benchmarking and Enhancing Long-Term Memory in LLMs |
 | [vasilyevdm/ai-agent-handbook](https://github.com/vasilyevdm/ai-agent-handbook) | 154 | MCP 服务器/上下文/工具输出优化/记忆层/API/SDK | Comprehensive guide to AI agent engineering: how 30+ frameworks actually work under the hood. Context rot,  co |
-| [mycelium-io/mycelium](https://github.com/mycelium-io/mycelium) | 121 | 图/时序/认知架构 | Multi-agent coordination + persistent memory, semantic negotiation, async rooms, and a shared knowledge graph |
-| [clawdbrunner/openclaw-graphiti-memory](https://github.com/clawdbrunner/openclaw-graphiti-memory) | 103 | 图/时序/认知架构 | Hybrid memory system for OpenClaw using Graphiti temporal knowledge graph |
-| [heymi/aldus-palace](https://github.com/heymi/aldus-palace) | 102 | MCP 服务器/本地优先/PKM/记忆层/API/SDK | A trustworthy context layer for AI that remembers, plans and acts — free text into typed commitments, decision |
-| [AIPMAndy/dna-memory](https://github.com/AIPMAndy/dna-memory) | 95 | 其他 | 🧬 让 AI Agent 像人脑一样学习成长 / Memory that learns, forgets, and evolves |
-| [syiibfs-hash/cc-agent-brain](https://github.com/syiibfs-hash/cc-agent-brain) | 94 | MCP 服务器/编码 Agent 记忆/图/时序/认知架构/本地优先/PKM | Local-first memory engine for coding agents (Claude Code/Cursor/Codex): SQLite+FTS5 retrieval, versioned bi-te |
-| [GoodAI/goodai-ltm-benchmark](https://github.com/GoodAI/goodai-ltm-benchmark) | 89 | 评测/论文/清单/记忆层/API/SDK | A library for benchmarking the Long Term Memory and Continual learning capabilities of  LLM based agents. With |
-| [sanonone/kektordb](https://github.com/sanonone/kektordb) | 87 | MCP 服务器/图/时序/认知架构 | AI memory system combining vector search with temporal knowledge graph. Built-in cognitive engine for agents.  |
-| [jaylfc/taosmd](https://github.com/jaylfc/taosmd) | 81 | 评测/论文/清单/图/时序/认知架构/本地优先/PKM/记忆层/API/SDK | Local-first AI memory — runs offline on any machine with 8 GB+ RAM (SBC, mini PC, laptop, workstation). Zero-l |
-| [cognicore-dev/cognicore-env](https://github.com/cognicore-dev/cognicore-env) | 79 | MCP 服务器 | Persistent memory, reflection & safety for AI agents. Zero dependencies — no vector DB, no embedding server. B |
 
 ## 从 GitHub 看到的新功能方向（上一份报告没有的）
 
@@ -274,7 +274,7 @@
 
 ## 数据文件
 
-- `research/github-repos.json`：1073 个仓库的元数据（star/fork/language/topics/license/updated）
+- `research/github-repos.json`：1603 个仓库的元数据（star/fork/language/topics/license/updated）
 - `research/github_scan.py`：搜索脚本（可改关键词、重跑）
 - `research/render_github_report.py`：本报告生成器
 

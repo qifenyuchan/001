@@ -98,15 +98,16 @@ def main():
     add("# GitHub AI 记忆生态扫描（2026-10）")
     add("")
     add("> 由 `research/github_scan.py` + `research/render_github_report.py` 自动生成。")
-    add("> 通过 GitHub 搜索 API 扫 14 组关键词（每组最多 100 条，按 star 排序），"
-        "去重后 1073 个仓库，收紧相关性后 **%d 个**。" % len(repos))
+    add("> 通过 GitHub 搜索 API 扫 %d 组关键词（每组最多 100 条，按 star 排序），"
+        "去重后 %d 个仓库，收紧相关性后 **%d 个**。" % (len(data["queries"]), data["total_unique"], len(repos)))
     add("")
     add("## 口径与局限")
     add("")
     add("- 相关性：名称/描述/topics 命中“记忆/上下文”强信号，且排除 GPU memory / in-memory / KV cache 等误命中")
     add("- 分类：一个仓库可属于多类；分类基于文字，不保证实现质量")
     add("- **README 未抓**：GitHub 核心 API 配额耗尽（60/h），本轮是描述级判断；词频会低估实现细节")
-    add("- star 只代表关注度，不代表质量、维护状态或安全性；归档项目已标注")
+    add("- star 只代表关注度，不代表质量、维护状态或安全性；归档项目已标注
+- 描述里的 “#1 / best / SOTA” 是项目自述，未独立验证")
     add("- 搜索每组最多 100 条，会漏掉低 star 新项目；这是“广度快照”，不是穷举")
     add("")
     add("## 分类分布")
@@ -181,7 +182,7 @@ def main():
     add("")
     add("## 数据文件")
     add("")
-    add("- `research/github-repos.json`：1073 个仓库的元数据（star/fork/language/topics/license/updated）")
+    add("- `research/github-repos.json`：1603 个仓库的元数据（star/fork/language/topics/license/updated）")
     add("- `research/github_scan.py`：搜索脚本（可改关键词、重跑）")
     add("- `research/render_github_report.py`：本报告生成器")
     add("")

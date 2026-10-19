@@ -6,7 +6,7 @@
 > 3. 北极星接下来该加什么、不该加什么？
 
 **方法**：公开产品文档、开源仓库、综述论文、独立评测交叉核对。
-**GitHub 专项扫描**：另见 **[RESEARCH-GITHUB.md](RESEARCH-GITHUB.md)**——14 组关键词、1073 个去重仓库、578 个相关项目、功能词频与低 star 偏门项目。
+**GitHub 专项扫描**：另见 **[RESEARCH-GITHUB.md](RESEARCH-GITHUB.md)**——22 组关键词、1603 个去重仓库、693 个相关项目、功能词频与低 star 偏门项目。
 **注意**：厂商自报的 benchmark 数字普遍不可直接比较（见第 5 节），本文会标注“自报/独立”。
 
 ---
@@ -237,10 +237,10 @@
 
 第一版偏“产品/论文”，GitHub 扫描补上了长尾与工程实现：
 
-- 规模：14 组关键词 → 1073 个去重仓库 → 收紧相关性后 **578 个**
+- 规模：22 组关键词 → 1603 个去重仓库 → 收紧相关性后 **693 个**
 - 新发现（首版未覆盖）：MemPalace、Hindsight、OpenViking、context-mode、TencentDB-Agent-Memory、MemOS、EverOS、Acontext、mnemosyne、memvid、agent-memory（Markdown-native）等
 - 新功能方向：**Context Database**、**上下文沙箱/工具输出压缩**、**Agent Skills 作为记忆**、**团队记忆 Hub**、**零云端单文件 SQLite**、**Markdown-native 便携记忆**、**记忆宫殿/空间结构**、**自演化 Memory OS**、**代码库记忆与对话记忆分离**
-- 功能词频（描述级，README 未计入）：语义/向量检索 43%、MCP 34%、记忆类型 17%、知识图谱 16%、遗忘/TTL 15%、巩固/反思 15%、本地优先 13%
+- 功能词频（描述级，README 未计入）：语义/向量检索 42%、MCP 34%、知识图谱 15%、记忆类型 15%、本地优先 15%、巩固/反思 14%、遗忘/TTL 13%、安全/投毒 5%、结构化字段 4%、时间有效性 3%、冲突 2%
 - 明细与 Top 100：[RESEARCH-GITHUB.md](RESEARCH-GITHUB.md)
 
 ## 10. 参考来源（节选）

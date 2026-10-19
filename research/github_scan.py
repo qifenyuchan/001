@@ -18,7 +18,7 @@ from datetime import datetime, timezone
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT_JSON = os.path.join(ROOT, "research", "github-repos.json")
 OUT_MD = os.path.join(ROOT, "docs", "RESEARCH-GITHUB.md")
-README_LIMIT = 45
+README_LIMIT = 0
 README_TIME_BUDGET = 110
 
 QUERIES = [
@@ -36,6 +36,14 @@ QUERIES = [
     "conversational memory",
     "memory consolidation llm",
     "forgetting llm memory",
+    "topic:agent-memory",
+    "topic:ai-memory",
+    "topic:long-term-memory",
+    "topic:memory-mcp",
+    "memory compaction",
+    "memory poisoning",
+    "personal knowledge graph",
+    "agent state persistence",
 ]
 
 FEATURES = {
