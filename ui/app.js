@@ -1,7 +1,10 @@
 "use strict";
 const $=s=>document.querySelector(s);
-const FIELDS=["时间","地点","人物","事情","原因","结果","重点"];
-const state={stats:null,sessions:[],view:"all",filter:"all",q:"",selected:null,records:[],page:1,pages:1,total:0,trash:[],conflicts:[],dirty:false,returnHash:""};
+const FALLBACK_PROFILE={id:"general",name:"通用",title_field:"事情",excerpt_field:"结果",fields:[
+  {key:"时间",label:"时间"},{key:"地点",label:"地点"},{key:"人物",label:"人物"},{key:"事情",label:"事情"},
+  {key:"原因",label:"原因"},{key:"结果",label:"结果"},{key:"重点",label:"重点"}
+]};
+const state={stats:null,sessions:[],view:"all",filter:"all",q:"",selected:null,records:[],page:1,pages:1,total:0,trash:[],conflicts:[],dirty:false,returnHash:"",profiles:{},profileList:[]};
 let deleteArm={id:"",until:0};
 const qcls=q=>["complete","partial","degraded"].includes(q)?q:"degraded";
 
@@ -33,9 +36,12 @@ function themeToggle(){
 }
 
 async function loadBase(){
-  const [stats,sessions,conf,trash]=await Promise.all([
-    api("/api/stats"),api("/api/sessions"),api("/api/conflicts"),api("/api/trash")
-  ]);  state.stats=stats;state.sessions=sessions.sessions||[];state.conflicts=conf.reports||[];state.trash=trash.items||[];
+  const [stats,sessions,conf,trash,prof]=await Promise.all([
+    api("/api/stats"),api("/api/sessions"),api("/api/conflicts"),api("/api/trash"),api("/api/profiles")
+  ]);
+  state.stats=stats;state.sessions=sessions.sessions||[];state.conflicts=conf.reports||[];state.trash=trash.items||[];
+  state.profileList=prof.profiles||[];state.profiles=Object.fromEntries(state.profileList.map(p=>[p.id,p]));
+  if(!state.profiles.general)state.profiles.general=FALLBACK_PROFILE;
   $("#cAll").textContent=stats.total;
   $("#cSess").textContent=state.sessions.length;
   $("#cConf").textContent=state.conflicts.length||"";
@@ -140,8 +146,8 @@ function head(title,sub,filters){
 }
 
 function rowHtml(r){
-  const title=(r.fields&&r.fields["事情"])||"(未命名)";
-  const excerpt=(r.fields&&r.fields["结果"])||(r.fields&&r.fields["重点"])||"";
+  const title=r.title||(r.fields&&(r.fields["事情"]||r.fields["事件"]||r.fields["目标"]))||"(未命名)";
+  const excerpt=r.excerpt||(r.fields&&(r.fields["结果"]||r.fields["重点"]||r.fields["下一步"]||r.fields["状态"]))||"";
   const isRange=r.kind==="range";
   const tn=Number(r.turn_no)||0;
   const from=Number(r.range&&r.range.from)||0;
@@ -224,7 +230,7 @@ async function renderSearch(q){
 async function renderTrash(){
   $("#main").innerHTML=head("回收站",`${state.trash.length} 项 · 删除可恢复`)+`<div class="list" style="padding-top:4px">${state.trash.map(t=>`
     <div class="trash-row">
-      <div class="info"><div class="title">${esc((t.record.fields&&t.record.fields["事情"])||"(无标题)")}</div>
+      <div class="info"><div class="title">${esc(t.record.title||(t.record.fields&&(t.record.fields["事情"]||t.record.fields["事件"]||t.record.fields["目标"]))||"(无标题)")}</div>
       <div class="meta">${esc(t.record.session_key)} · 删除于 ${fullFmt(t.deleted_at)} · ${esc(t.reason)}</div></div>
       <button class="btn" onclick="restoreTrash('${t.trash_id}')">恢复</button>
       <button class="btn danger" onclick="purgeTrash('${t.trash_id}')">彻底删除</button>
@@ -259,22 +265,25 @@ async function openRecord(id,keepView){
   if(!state.returnHash) state.returnHash = location.hash.startsWith("#/r/") ? "#/all" : (location.hash||"#/all");
   state.selected=id;state.dirty=false;
   $("#shell").classList.add("with-panel");
+  const profile=state.profiles[rec.profile]||state.profiles.general||FALLBACK_PROFILE;
+  const installed=!!state.profiles[rec.profile]||rec.profile==="general";
   const miss=new Set(rec.missing||[]);
   const tn=Number(rec.turn_no)||0;
   const from=Number(rec.range&&rec.range.from)||0;
   const to=Number(rec.range&&rec.range.to)||0;
-  const fieldsHtml=FIELDS.map(k=>{
-    const v=(rec.fields&&rec.fields[k])||"";
-    const rows=k==="时间"?1:(k==="地点"||k==="人物")?2:3;
-    return `<div class="fld"><label><span>${k}</span>${miss.has(k)?'<span class="miss">缺失</span>':""}</label>
-      <textarea id="f-${k}" data-field="${k}" class="${miss.has(k)?"missing":""}" rows="${rows}">${esc(v)}</textarea></div>`;
+  const fieldsHtml=profile.fields.map((f,i)=>{
+    const v=(rec.fields&&rec.fields[f.key])||"";
+    const rows=Math.min(4,Math.max(1,Math.round((Number(f.max_chars)||200)/100)));
+    return `<div class="fld"><label><span>${esc(f.label||f.key)}</span>${miss.has(f.key)?'<span class="miss">缺失</span>':""}</label>
+      <textarea id="f-${i}" data-field="${esc(f.key)}" class="${miss.has(f.key)?"missing":""}" rows="${rows}">${esc(v)}</textarea></div>`;
   }).join("");
   $("#panel").innerHTML=`
     <div class="panel-head">
-      <div class="t"><button class="icon-btn panel-back" onclick="closePanel()" aria-label="返回">←</button><h2>${esc((rec.fields&&rec.fields["事情"])||"(未命名)")}</h2><button class="icon-btn" onclick="closePanel()" aria-label="关闭">✕</button></div>
+      <div class="t"><button class="icon-btn panel-back" onclick="closePanel()" aria-label="返回">←</button><h2>${esc((rec.fields&&(rec.fields[profile.title_field]||rec.fields["事情"]))||"(未命名)")}</h2><button class="icon-btn" onclick="closePanel()" aria-label="关闭">✕</button></div>
       <div class="meta">
         <span class="pill">${rec.kind==="range"?"范围 "+from+"–"+to:"第 "+tn+" 轮"}</span>
         <span class="pill ${rec.quality==="complete"?"ok":"warn"}">${rec.quality==="complete"?"完整":rec.quality==="partial"?"部分":"骨架"}</span>
+        <span class="pill ${installed?"":"warn"}">${esc(profile.name)}${installed?"":"（未安装）"}</span>
         ${rec.truncated?'<span class="pill warn">截断轮</span>':""}
         <span>${esc(rec.session_key)}</span><span>${fullFmt(rec.created_at)}</span><span>r${Number(rec.revision)||1}</span>
       </div>
@@ -306,7 +315,8 @@ function closePanel(){
   if(location.hash.startsWith("#/r/")) location.hash=back;
 }
 async function saveRecord(id,rev){
-  const fields={};FIELDS.forEach(k=>{const el=document.getElementById("f-"+k);if(el)fields[k]=el.value.trim();});
+  const fields={};
+  document.querySelectorAll("#panel textarea[data-field]").forEach(el=>{fields[el.dataset.field]=el.value.trim();});
   const raw=document.getElementById("f-raw");
   const body={id,fields,raw_text:raw?raw.value:"",expect_revision:rev};
   try{

@@ -2,35 +2,30 @@
 
 [English](README.en.md) · 中文
 
-给任何支持 MCP 的 AI Agent 装"长期记忆"的独立服务。**不绑定宿主、零运行时依赖、下载即用。**
+一个给 MCP Agent 用的本地优先记忆服务。
 
-> 只有三件事：
-> 1. **每轮对话总结**（Agent 填表）；
-> 2. **上一轮总结注入下一轮**（严格只注入紧邻上一轮的一条，绝不注入全量历史）；
-> 3. **可编辑记忆仓库**（浏览器查看 / 逐字段修改 / 删除恢复）。
-
----
+- 每轮结束存一张字段表，下一轮开始只带回上一张
+- 数据是用户目录里的 JSON 文件，可读、可改、可备份
+- 多设备用你自己的云盘 / git 同步，不经过托管服务
+- 附带一个可编辑的记忆仓库 UI
 
 ## 为什么是这个形状
 
-主流记忆插件靠"范围压缩"：上下文压缩一次，再压缩一次，几轮之后记忆就漂了。
-本项目的做法相反：**每轮总结一次成型、不再被二次压缩**，作为地面真值存档；
-下一轮只注入上一轮那一条（相邻上下文本来就在 AI 记忆范围内，真正的价值是几十轮后被截断时，
-AI 仍能从这条滚动锚点接上）。完整历史不注入，用 `memory_search` 按需检索。
+把“每轮”当作最小单位：每轮存一张字段表，不反复压缩历史；下一轮只注入上一张，
+需要更早的信息时再检索。
 
-2026 年 LongMemEval 榜首的 Mastra Observational Memory（94.87%）验证了同一条路线：
-**压缩循环优于重检索**；而 PrecisionMemBench 测出主流检索方案主动检索精度只有 0.05–0.09、
-会话漂移污染严重——这也解释了为什么本项目坚持"有界注入 + 人可编辑"。
+这样做的代价是 Agent 每轮多调一次工具；收益是记忆不会被多次摘要改写，
+并且每条记录都能在 UI 里直接改。
 
 ## 三条需求如何被满足
 
 | 需求 | 机制 |
 |---|---|
-| 每轮总结 | Agent 轮末调用 `memory_save`，提交七字段表（时间/地点/人物/事情/原因/结果/重点）；服务校验并落库，缺字段也保存（标记 `partial`），只给原文也保存（`degraded` 骨架）——**截断轮永不丢** |
-| 上轮注入下轮 | Agent 轮首调用 `memory_recall`，只返回紧邻上一轮一条、≤1200 字符、不含原文；`initialize.instructions` 与 `docs/AGENTS.md` 强制约定 |
-| 可编辑仓库 | `http://127.0.0.1:8777`：会话时间线、七字段逐字段编辑（带乐观锁）、缺口占位、回收站恢复、服务端分页 |
+| 每轮总结 | Agent 轮末调用 `memory_save`，提交七字段表（时间/地点/人物/事情/原因/结果/重点）；服务校验并落库，缺字段也保存（标记 `partial`），只给原文也保存（`degraded` 骨架）——截断轮也会保存为骨架，不中断 |
+| 上轮注入下轮 | Agent 轮首调用 `memory_recall`，只返回紧邻上一轮一条、≤1200 字符、不含原文；`initialize.instructions` 与 `docs/AGENTS.md` 作为约定 |
+| 可编辑仓库 | `http://127.0.0.1:8777`：会话时间线、字段逐字段编辑（带乐观锁）、缺口占位、回收站恢复、服务端分页 |
 
-## 快速开始（任何 Agent）
+## 快速开始（MCP 宿主）
 
 1. 安装 Node ≥ 18.17（MCP 走 stdio，不需要数据库、不需要模型 key、不需要联网）。
 2. 拿到本目录（已含构建产物 `dist/`，无需 `npm install` 即可运行）。
@@ -105,6 +100,27 @@ node dist/cli.js export [--out backup.json]
 ```
 
 全局参数：`--data <dir>`、`--range-every <n>`。
+
+## 三套字段方案（profiles）
+
+默认 **general**（七字段：时间/地点/人物/事情/原因/结果/重点）。
+另外两套需要单独安装：
+
+| 方案 | 用途 | 字段 |
+|---|---|---|
+| `work` | 长工作：目标、进展、决策、阻塞、下一步 | 8 个 |
+| `story` | 长剧情：时间线、场景、人物、关系、事件、伏笔、状态、下一步 | 8 个 |
+
+```bash
+node dist/cli.js profile install work     # 从 GitHub 下载
+node dist/cli.js profile install story
+node dist/cli.js profile list
+```
+
+安装到 `data/profiles/`，随数据目录同步；保存时传 `profile: "work"`。
+字段定义、自定义方式见 **[docs/PROFILES.md](docs/PROFILES.md)**。
+
+![长工作方案](docs/screenshots/profile-work.png)
 
 ## 跨设备 / 跨网络（本地优先）
 
@@ -190,7 +206,7 @@ node dist/migrate.js --apply   --from "<旧>/pc_host/data" --data ./data --repor
 ## 测试
 
 ```bash
-npm test        # 11 套件 69 断言：schema/store/recall/range/search/mcp/ui/sync/migrate/auth/security
+npm test        # 12 套件 74 断言：schema/store/recall/range/search/mcp/ui/sync/migrate/auth/security/profiles
 npm run build   # TypeScript 构建（仅开发需要；dist/ 已随包提供）
 ```
 

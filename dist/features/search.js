@@ -3,6 +3,7 @@ import { tokenize } from "../core/tokenize.js";
 import { scoreRecord } from "../core/score.js";
 import { deriveTitleFromFields } from "../core/title.js";
 import { safeSlice } from "../core/text.js";
+import { sanitizeKey } from "../core/util.js";
 export function searchRecords(repo, query, opts = {}) {
     const terms = tokenize(query);
     const limit = Math.max(1, Math.min(50, Math.floor(Number(opts.limit) || 5)));
@@ -10,12 +11,12 @@ export function searchRecords(repo, query, opts = {}) {
         return { ok: true, total: 0, results: [] };
     let records = repo.all();
     if (opts.session_key) {
-        const key = String(opts.session_key).toLowerCase().replace(/[^a-z0-9_-]/g, "").slice(0, 48) || "default";
+        const key = sanitizeKey(opts.session_key);
         records = records.filter(r => r.session_key === key);
     }
     const scored = [];
     for (const rec of records) {
-        const s = scoreRecord(rec, terms);
+        const s = scoreRecord(rec, terms, repo.profileOf(rec.profile));
         if (s > 0)
             scored.push({ rec, score: s });
     }
@@ -26,8 +27,8 @@ export function searchRecords(repo, query, opts = {}) {
         session_key: rec.session_key,
         turn_no: rec.turn_no,
         created_at: rec.created_at,
-        title: deriveTitleFromFields(rec.fields, rec.raw_text),
-        excerpt: safeSlice(`${rec.fields["事情"] || ""} ${rec.fields["结果"] || ""}`.trim(), 120),
+        title: deriveTitleFromFields(rec.fields, rec.raw_text, repo.profileOf(rec.profile)),
+        excerpt: safeSlice(`${rec.fields[repo.profileOf(rec.profile).excerpt_field] || ""}`.trim(), 120),
         score: Math.round(score * 100) / 100,
     }));
     return { ok: true, total: scored.length, results };

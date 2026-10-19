@@ -16,7 +16,7 @@ export const LITE_TOOL_NAMES = ["memory_save", "memory_recall", "memory_search"]
 
 const SEVEN_SCHEMA = {
   type: "object",
-  description: "Seven-field summary. Keys may be Chinese (时间/地点/人物/事情/原因/结果/重点) or English aliases (time/place/people/event/cause/result/keypoint).",
+  description: "Summary fields. Default profile general uses 时间/地点/人物/事情/原因/结果/重点 (English aliases accepted). Installed profiles (work/story) use their own keys; pass profile accordingly.",
   properties: {
     时间: { type: "string", description: "When it happened (date or datetime)" },
     地点: { type: "string", description: "Where (use 无 when not applicable)" },
@@ -38,9 +38,10 @@ export const TOOL_DEFS: ToolDef[] = [
       type: "object",
       properties: {
         session_id: { type: "string", description: "Stable conversation id (e.g. your host session id)" },
+        profile: { type: "string", description: "Field profile: general (default), or an installed profile id such as work / story" },
         turn_no: { type: "number", description: "Turn number; omit to auto-assign next" },
         fields: SEVEN_SCHEMA,
-        content: { type: "string", description: "Optional: seven-field text (时间：… lines)" },
+        content: { type: "string", description: "Optional: key：value lines matching the profile fields" },
         raw_text: { type: "string", description: "Optional raw turn text (question + answer), head/tail windowed" },
         truncated: { type: "boolean", description: "True if the turn was cut off" },
         kind: { type: "string", enum: ["turn", "range"], description: "turn (default) or range" },
@@ -155,15 +156,17 @@ export function createTools(repo: RepoStore, config: Config) {
     if (!hasFields && !hasContent && !hasRaw) {
       throw new NorthstarError("EMPTY_INPUT", "nothing to save: provide fields, content or raw_text");
     }
-    // content 非七字段且无 raw：拒绝，避免落空记录（P2-11）
+    const profile = repo.profileOf(String(args.profile || "").trim() || undefined);
+    // content 与当前 profile 不匹配且无 raw：拒绝，避免落空记录
     if (hasContent && !hasFields && !hasRaw) {
-      const parsed = contentToFields(String(args.content));
+      const parsed = contentToFields(String(args.content), profile);
       if (!Object.values(parsed).some(v => v.trim())) {
-        throw new NorthstarError("INVALID_ARG", "content is not a seven-field block; provide fields or raw_text");
+        throw new NorthstarError("INVALID_ARG", "content does not match the profile fields; provide fields or raw_text");
       }
     }
     const input: SaveInput = {
       session_id: String(args.session_id || "").trim() || "default",
+      profile: String(args.profile || "").trim() || profile.id,
       turn_no: args.turn_no,
       fields: args.fields,
       content: args.content,
@@ -192,6 +195,7 @@ export function createTools(repo: RepoStore, config: Config) {
       ok: true,
       id: result.id,
       kind: result.kind,
+      profile: result.profile,
       session_key: result.session_key,
       turn_no: result.turn_no,
       next_turn_no: result.next_turn_no,
@@ -242,6 +246,7 @@ export function createTools(repo: RepoStore, config: Config) {
   function listTool(args: Record<string, any>) {
     const r = repo.list({
       session_key: args.session_id ? String(args.session_id) : undefined,
+      profile: args.profile ? String(args.profile) : undefined,
       kind: args.kind === "range" ? "range" : args.kind === "turn" ? "turn" : undefined,
       quality: args.quality === "incomplete" ? "incomplete" : undefined,
       page: args.page,
@@ -278,9 +283,12 @@ export function createTools(repo: RepoStore, config: Config) {
   }
 
   function decorate(rec: MemoryRecord, withFields = true) {
+    const profile = repo.profileOf(rec.profile);
     return {
       id: rec.id,
       kind: rec.kind,
+      profile: rec.profile,
+      profile_name: profile.name,
       session_key: rec.session_key,
       session_id: rec.session_id,
       turn_no: rec.turn_no,
@@ -295,7 +303,7 @@ export function createTools(repo: RepoStore, config: Config) {
       auto: rec.auto,
       truncated: rec.truncated,
       raw_truncated: rec.raw_truncated,
-      title: deriveTitleFromFields(rec.fields, rec.raw_text),
+      title: deriveTitleFromFields(rec.fields, rec.raw_text, profile),
       fields: withFields ? rec.fields : undefined,
       raw_text: rec.raw_text,
     };
@@ -348,5 +356,6 @@ export const INSTRUCTIONS = [
   "3) Never skip a turn. If truncated, pass truncated=true, the fields you have, and raw_text (only then — do not send raw_text on normal turns).",
   "4) Only the immediately previous turn is injected. Call memory_search for older history; never ask for full history injection.",
   "5) If memory_save returns range_due, an automatic range summary is created; you may replace it via kind=\"range\".",
-  "6) Never store API keys, passwords, tokens or other secrets.",
+  "6) Field profiles: general is the default. If a profile is installed (work, story), pass profile=\"<id>\" on save and use its fields.",
+  "7) Never store API keys, passwords, tokens or other secrets.",
 ].join("\n");

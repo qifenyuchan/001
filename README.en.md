@@ -1,6 +1,6 @@
 # Northstar Memory
 
-Long-term memory for any MCP-capable AI agent — **local-first, structured, editable, zero runtime dependencies**.
+Local-first memory service for MCP-capable AI agents: structured, editable, zero runtime dependencies.
 
 > Three things only:
 > 1. **Per-turn summary** — the agent fills a seven-field form at the end of each turn.
@@ -9,8 +9,7 @@ Long-term memory for any MCP-capable AI agent — **local-first, structured, edi
 
 ## Why this shape
 
-Most memory plugins compress history repeatedly; compression drifts. Northstar keeps one immutable
-seven-field summary per turn (the ground truth), injects only the last one, and lets the agent search
+Northstar stores one field table per turn, injects only the previous one, and lets the agent search
 older turns on demand. No external model, no vector database, no hosted service.
 
 Measured overhead: **~600–800 tokens per turn**, recall **<1 ms**, save **~30 ms**. See [docs/LOAD.md](docs/LOAD.md).
@@ -41,6 +40,17 @@ MCP config (stdio):
 Host-specific examples: [docs/HOSTS.md](docs/HOSTS.md) (Claude Desktop, Cursor, WorkBuddy, ZCode, generic).
 
 Give the agent the behavior contract: [docs/AGENTS.md](docs/AGENTS.md) or the compressed [docs/SKILL.md](docs/SKILL.md).
+
+## Profiles
+
+Default `general` has seven fields. `work` and `story` are optional packs:
+
+```bash
+node dist/cli.js profile install work
+node dist/cli.js profile install story
+```
+
+See [docs/PROFILES.md](docs/PROFILES.md).
 
 ## Tools
 
@@ -88,7 +98,7 @@ node dist/cli.js export --out backup.json
 ## Tests
 
 ```bash
-npm ci && npm run build && npm test   # 11 suites, 69 assertions
+npm ci && npm run build && npm test   # 12 suites, 74 assertions
 ```
 
 ## Docs

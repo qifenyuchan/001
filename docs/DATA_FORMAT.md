@@ -20,6 +20,7 @@
   "schema": 1,
   "id": "tm_muwsmpge_hrpp",
   "kind": "turn | range",
+  "profile": "general",
   "space_id": "personal",
   "session_id": "宿主会话 id（原样）",
   "session_key": "清洗后的键（目录名）",
@@ -63,6 +64,7 @@
 - `range` 仅 `kind="range"` 有；`legacy` 仅迁移条有，只作审计，不参与检索与注入。
 - `revision` 每次保存/编辑 +1；`memory_update` 可带 `expect_revision` 做乐观锁。
 - `space_id / updated_by / field_meta` 是多设备同步的基础：合并时按字段 `ts` 决胜，平局按 `by`。
+- `profile` 决定字段集合：默认 `general`（七字段）；`work` / `story` 安装后使用各自字段。
 - `device_id` 存在 `~/.northstar/device_id`，不放进同步目录（避免多设备互相覆盖）。
 
 ## quality 语义

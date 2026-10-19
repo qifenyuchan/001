@@ -14,6 +14,7 @@ export function buildAutoRange(repo: RepoStore, sessionId: string, from: number,
   if (turns.length < 2) {
     return { ok: false, reason: `not-enough-turns(${turns.length})` };
   }
+  const profile = repo.profileOf(turns[0].profile);
   const uniq = (vals: string[], max: number) => {
     const out: string[] = [];
     for (const v of vals) {
@@ -23,22 +24,33 @@ export function buildAutoRange(repo: RepoStore, sessionId: string, from: number,
     }
     return out;
   };
-  const shi = uniq(turns.map(t => t.fields["事情"]), 5).join("；");
   const last = turns[turns.length - 1];
-  const zhong = uniq(turns.map(t => t.fields["重点"]), 3).join("；");
-  const ren = uniq(turns.map(t => t.fields["人物"]), 3).join("、");
-  const fields: SevenFields = {
-    时间: `${fmtDay(turns[0].created_at)} ~ ${fmtDay(last.created_at)}`,
-    地点: "无",
-    人物: ren || "无",
-    事情: safeSlice(shi || "（区间内无有效事情记录）", 400),
-    原因: "无",
-    结果: safeSlice(last.fields["结果"] || "无", 400),
-    重点: safeSlice(zhong || "无", 300),
+  const lastNonEmpty = (field: string) => {
+    for (let i = turns.length - 1; i >= 0; i--) {
+      const v = (turns[i].fields[field] || "").trim();
+      if (v) return v;
+    }
+    return "";
   };
+  const fields: SevenFields = {};
+  for (const f of profile.fields) {
+    let value = "";
+    if (f.key === "时间" || f.key === "时间线") {
+      value = `${fmtDay(turns[0].created_at)} ~ ${fmtDay(last.created_at)}`;
+    } else if (f.key === profile.excerpt_field) {
+      value = lastNonEmpty(f.key);
+    } else if (f.key === profile.title_field) {
+      value = uniq(turns.map(t => t.fields[f.key]), 5).join("；");
+    } else {
+      value = uniq(turns.map(t => t.fields[f.key]), 3).join("；");
+    }
+    if (!value) value = f.required ? "（区间内无有效记录）" : "";
+    fields[f.key] = safeSlice(value, f.max_chars || 400);
+  }
   const covers = turns.map(t => t.id);
   const res = repo.upsertRange({
     session_id: key,
+    profile: profile.id,
     kind: "range",
     range_from: from,
     range_to: to,

@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.5.0 — 2026-10-20
+
+- 三套字段方案：`general` 内置；`work`（长工作）/ `story`（长剧情）可单独安装
+- 新增 `profile` 注册表、CLI `profile install/list/remove`、`/api/profiles`
+- 保存/注入/范围总结/检索/UI 详情全部按 profile 驱动
+- README 降调；新增 `docs/PROFILES.md`；测试 74 项
+
 ## 2.4.0 — 2026-10-19
 
 - 默认 **lite 模式**：只暴露 `memory_save` / `memory_recall` / `memory_search`（`--tools full` 开 9 个）

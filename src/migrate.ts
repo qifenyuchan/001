@@ -192,6 +192,7 @@ function buildLegacyRecord(e: LegacyEntry, chat: string, key: string, turnNo: nu
     schema: 1,
     id,
     kind,
+    profile: "general",
     space_id: "personal",
     session_id: chat,
     session_key: key,

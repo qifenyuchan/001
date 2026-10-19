@@ -4,6 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { PACKAGE_ROOT, type Config } from "../config.js";
 import { RepoStore } from "../store/repo.js";
+import { GENERAL_PROFILE } from "../store/profiles.js";
 import { searchRecords } from "../features/search.js";
 import { deriveTitleFromFields } from "../core/title.js";
 import { logWarn } from "../log.js";
@@ -48,10 +49,12 @@ function readBody(req: http.IncomingMessage): Promise<any> {
   });
 }
 
-function decorate(rec: MemoryRecord, sessionName?: string) {
+function decorate(rec: MemoryRecord, sessionName?: string, profile = GENERAL_PROFILE) {
   return {
     id: rec.id,
     kind: rec.kind,
+    profile: rec.profile,
+    profile_name: profile.name,
     session_key: rec.session_key,
     session_id: rec.session_id,
     session_name: sessionName,
@@ -69,7 +72,8 @@ function decorate(rec: MemoryRecord, sessionName?: string) {
     truncated: rec.truncated,
     raw_truncated: rec.raw_truncated,
     origin: rec.origin,
-    title: deriveTitleFromFields(rec.fields, rec.raw_text),
+    title: deriveTitleFromFields(rec.fields, rec.raw_text, profile),
+    excerpt: rec.fields[profile.excerpt_field] || "",
     fields: rec.fields,
     raw_text: rec.raw_text,
   };
@@ -188,7 +192,7 @@ export function createUiServer(repo: RepoStore, config: Config): http.Server {
       }
 
       if (req.method === "GET" && p === "/api/health") {
-        json(res, 200, { ok: true, name: "northstar-memory", version: "2.4.0" });
+        json(res, 200, { ok: true, name: "northstar-memory", version: "2.5.0" });
         return;
       }
 
@@ -200,13 +204,19 @@ export function createUiServer(repo: RepoStore, config: Config): http.Server {
       if (req.method === "GET" && p === "/api/list") {
         const r = repo.list({
           session_key: url.searchParams.get("session") || undefined,
+          profile: url.searchParams.get("profile") || undefined,
           kind: url.searchParams.get("kind") === "range" ? "range" : url.searchParams.get("kind") === "turn" ? "turn" : undefined,
           quality: url.searchParams.get("quality") === "incomplete" ? "incomplete" : undefined,
           page: Number(url.searchParams.get("page") || 1),
           page_size: Number(url.searchParams.get("page_size") || 30),
         });
         const sessions = new Map(repo.listSessions(true).map(s => [s.session_key, s.name]));
-        json(res, 200, { ...r, records: r.records.map(x => decorate(x, sessions.get(x.session_key))) });
+        json(res, 200, { ...r, records: r.records.map(x => decorate(x, sessions.get(x.session_key), repo.profileOf(x.profile))) });
+        return;
+      }
+
+      if (req.method === "GET" && p === "/api/profiles") {
+        json(res, 200, { ok: true, profiles: repo.profilesList(), default: "general" });
         return;
       }
 
@@ -233,7 +243,7 @@ export function createUiServer(repo: RepoStore, config: Config): http.Server {
           .all()
           .filter(r => r.session_key === key)
           .sort((a, b) => a.turn_no - b.turn_no || a.created_at - b.created_at)
-          .map(r => decorate(r, view.name));
+          .map(r => decorate(r, view.name, repo.profileOf(r.profile)));
         json(res, 200, { ok: true, session: view, records });
         return;
       }
@@ -245,12 +255,12 @@ export function createUiServer(repo: RepoStore, config: Config): http.Server {
           json(res, 404, { ok: false, error: "record not found" });
           return;
         }
-        json(res, 200, { ok: true, record: decorate(rec) });
+        json(res, 200, { ok: true, record: decorate(rec, undefined, repo.profileOf(rec.profile)) });
         return;
       }
 
       if (req.method === "GET" && p === "/api/trash") {
-        json(res, 200, { ok: true, items: repo.trashList().map(t => ({ trash_id: t.trash_id, deleted_at: t.deleted_at, reason: t.reason, record: decorate(t.record) })) });
+        json(res, 200, { ok: true, items: repo.trashList().map(t => ({ trash_id: t.trash_id, deleted_at: t.deleted_at, reason: t.reason, record: decorate(t.record, undefined, repo.profileOf(t.record.profile)) })) });
         return;
       }
 
@@ -278,7 +288,7 @@ export function createUiServer(repo: RepoStore, config: Config): http.Server {
           rating: body.rating,
           expect_revision: body.expect_revision,
         });
-        json(res, 200, { ok: true, record: decorate(rec) });
+        json(res, 200, { ok: true, record: decorate(rec, undefined, repo.profileOf(rec.profile)) });
         return;
       }
 
@@ -296,7 +306,7 @@ export function createUiServer(repo: RepoStore, config: Config): http.Server {
       if (req.method === "POST" && p === "/api/restore") {
         const body = await readBody(req);
         const rec = repo.restore(String(body.trash_id || ""));
-        json(res, 200, { ok: true, record: decorate(rec) });
+        json(res, 200, { ok: true, record: decorate(rec, undefined, repo.profileOf(rec.profile)) });
         return;
       }
 

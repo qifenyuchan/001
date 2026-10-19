@@ -4,6 +4,7 @@ import type { MemoryRecord, RecallQuery, RecallResult } from "../core/types.js";
 import { RepoStore } from "../store/repo.js";
 import { safeSlice } from "../core/text.js";
 import { fmtDateTime, sanitizeKey } from "../core/util.js";
+import type { Profile } from "../store/profiles.js";
 
 const QUALITY_LABEL: Record<string, string> = {
   complete: "完整",
@@ -19,42 +20,47 @@ function budgetLine(label: string, value: string, budget: number): string {
   return prefix + safeSlice(value.replace(/\s+/g, " ").trim(), room);
 }
 
-export function formatTurnBlock(rec: MemoryRecord, maxChars: number): string {
-  const header = `【上一轮记忆｜第${rec.turn_no}轮｜${fmtDateTime(rec.created_at)}｜${QUALITY_LABEL[rec.quality] || rec.quality}】`;
+export function formatTurnBlock(rec: MemoryRecord, profile: Profile, maxChars: number): string {
+  const pname = profile.id === "general" ? "" : `｜${profile.name}`;
+  const header = `【上一轮记忆｜第${rec.turn_no}轮｜${fmtDateTime(rec.created_at)}｜${QUALITY_LABEL[rec.quality] || rec.quality}${pname}】`;
   const f = rec.fields;
-  const headLine = ["时间", "地点", "人物"]
-    .map(k => `${k}：${safeSlice((f as any)[k] || "无", 40)}`)
+  const headFields = profile.fields.filter(x => x.weight <= 1.5).slice(0, 3);
+  const mainFields = profile.fields.filter(x => !headFields.includes(x) && (f[x.key] || "").trim());
+  const headLine = headFields
+    .map(x => `${x.label}：${safeSlice((f[x.key] || "无"), 40)}`)
     .join(" ｜ ");
-  const fixed = header.length + headLine.length + 2;
-  let budget = Math.max(120, maxChars - fixed);
-  const alloc = { 事情: 0.42, 结果: 0.3, 重点: 0.18, 原因: 0.1 } as Record<string, number>;
+  const fixed = header.length + (headLine ? headLine.length + 1 : 0) + 2;
+  const budget = Math.max(160, maxChars - fixed);
+  const totalWeight = mainFields.reduce((sum, x) => sum + x.weight, 0) || 1;
   const lines: string[] = [];
-  for (const key of ["事情", "结果", "重点", "原因"]) {
-    const value = (f as any)[key] || "";
-    if (!value) continue;
-    const part = Math.floor(budget * alloc[key]);
-    const line = budgetLine(key, value, part);
+  let cut = false;
+  for (const x of mainFields) {
+    const part = Math.max(40, Math.floor((budget * x.weight) / totalWeight));
+    if ((f[x.key] || "").length > part) cut = true;
+    const line = budgetLine(x.label, f[x.key], part);
     if (line) lines.push(line);
   }
-  const text = header + "\n" + headLine + "\n" + lines.join("\n");
-  if (text.length > maxChars) {
+  let text = header + (headLine ? "\n" + headLine : "") + (lines.length ? "\n" + lines.join("\n") : "");
+  if (text.length > maxChars || cut) {
     const suffix = "\n（已截断，完整内容用 memory_get）";
-    return safeSlice(text, Math.max(80, maxChars - suffix.length)) + suffix;
+    text = safeSlice(text, Math.max(80, maxChars - suffix.length)) + suffix;
   }
   return text;
 }
 
-export function formatRangeBlock(rec: MemoryRecord, maxChars: number): string {
+export function formatRangeBlock(rec: MemoryRecord, profile: Profile, maxChars: number): string {
   const r = rec.range;
-  const header = `【最近范围记忆｜第${r ? r.from : "?"}-${r ? r.to : "?"}轮｜${fmtDateTime(rec.created_at)}｜${rec.auto ? "自动" : "精编"}】`;
+  const pname = profile.id === "general" ? "" : `｜${profile.name}`;
+  const header = `【最近范围记忆｜第${r ? r.from : "?"}-${r ? r.to : "?"}轮｜${fmtDateTime(rec.created_at)}｜${rec.auto ? "自动" : "精编"}${pname}】`;
   const f = rec.fields;
-  const body = [
-    `事情：${safeSlice(f["事情"] || "无", 160)}`,
-    `结果：${safeSlice(f["结果"] || "无", 120)}`,
-    `重点：${safeSlice(f["重点"] || "无", 100)}`,
-  ].join("\n");
-  const text = header + "\n" + body;
-  return text.length > maxChars ? safeSlice(text, maxChars - 18) + "\n（已截断，完整内容用 memory_get）" : text;
+  const ordered = profile.fields
+    .filter(x => (f[x.key] || "").trim())
+    .sort((a, b) => b.weight - a.weight)
+    .slice(0, 6);
+  const per = Math.max(60, Math.floor((maxChars - header.length - 8) / Math.max(1, ordered.length)));
+  const body = ordered.map(x => budgetLine(x.label, f[x.key], per)).filter(Boolean).join("\n");
+  const text = header + (body ? "\n" + body : "");
+  return text.length > maxChars ? safeSlice(text, Math.max(80, maxChars - 18)) + "\n（已截断，完整内容用 memory_get）" : text;
 }
 
 export function recall(repo: RepoStore, query: RecallQuery, maxChars: number): RecallResult {
@@ -73,7 +79,7 @@ export function recall(repo: RepoStore, query: RecallQuery, maxChars: number): R
     if (!latest) {
       return { ok: true, found: false, text: "（暂无范围总结）", next_turn_no: next, gap: false, reason: "no-range" };
     }
-    return { ok: true, found: true, text: formatRangeBlock(latest, maxChars), record: latest, next_turn_no: next, gap: false };
+    return { ok: true, found: true, text: formatRangeBlock(latest, repo.profileOf(latest.profile), maxChars), record: latest, next_turn_no: next, gap: false };
   }
 
   const prev = repo.previousTurn(key, query.before_turn_no);
@@ -93,7 +99,7 @@ export function recall(repo: RepoStore, query: RecallQuery, maxChars: number): R
     ? `\n（注意：${gaps.length ? `第${gaps.slice(0, 8).join("、")}轮` : `第${prev.record.turn_no + 1}轮之后的轮次`}缺少总结，可让用户补记或用 memory_search 检索历史）`
     : "";
   // 先预留提示长度，保证最终块不超过预算（P2-1）
-  let text = formatTurnBlock(prev.record, Math.max(120, maxChars - hint.length));
+  let text = formatTurnBlock(prev.record, repo.profileOf(prev.record.profile), Math.max(160, maxChars - hint.length));
   text += hint;
   if (text.length > maxChars) text = safeSlice(text, maxChars);
   return { ok: true, found: true, text, record: prev.record, next_turn_no: prev.next_turn_no, gap };

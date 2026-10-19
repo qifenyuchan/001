@@ -11,6 +11,7 @@ import type {
   SaveResult,
   SessionMeta,
   SessionView,
+  SevenFields,
   StatsResult,
   Tombstone,
   TrashItem,
@@ -20,6 +21,7 @@ import type {
 import { NorthstarError, SEVEN_FIELD_KEYS } from "../core/types.js";
 import {
   assess,
+  assessFor,
   buildRange,
   buildTurn,
   ensureRecordShape,
@@ -28,6 +30,7 @@ import {
   partialFields,
   recordFileName,
 } from "./schema.js";
+import { GENERAL_PROFILE, ProfileRegistry, profileFieldKeys, type Profile } from "./profiles.js";
 import { fieldsToContent } from "./schema.js";
 import { atomicWriteJson, ensureDir, listDirs, listFiles, readJson, revStamp, touchRev, withLock } from "./files.js";
 import { clampInt, sanitizeKey, normTags, isSafeId } from "../core/util.js";
@@ -64,6 +67,7 @@ export interface RepoOptions {
   rawTail: number;
   deviceId?: string;
   spaceId?: string;
+  defaultProfile?: string;
 }
 
 interface SessionState {
@@ -99,6 +103,8 @@ export class RepoStore {
   private opts: RepoOptions;
   private sessions = new Map<string, SessionState>();
   private byId = new Map<string, MemoryRecord>();
+  private profiles: ProfileRegistry;
+  private defaultProfile: string;
   private corruptedCount = 0;
   private lastMaintenance = 0;
   private lastMergeCount = 0;
@@ -114,6 +120,8 @@ export class RepoStore {
     this.tombDir = path.join(this.dataDir, "tombstones");
     this.conflictDir = path.join(this.dataDir, "conflicts");
     this.lockDir = path.join(this.dataDir, ".locks");
+    this.defaultProfile = opts.defaultProfile || "general";
+    this.profiles = new ProfileRegistry(this.dataDir);
     this.migrateLegacyLayout();
     for (const d of [this.sessionsDir, this.trashDir, this.tombDir, this.conflictDir, this.lockDir]) ensureDir(d);
     this.writeSpaceMeta();
@@ -203,6 +211,7 @@ export class RepoStore {
         continue;
       }
       if (rec.session_key !== key) rec.session_key = key;
+      this.recomputeQuality(rec);
       records.set(rec.id, rec);
     }
     const state: SessionState = { key, meta, dir, records, rev: revStamp(dir) };
@@ -259,6 +268,31 @@ export class RepoStore {
     this.byId.clear();
     this.corruptedCount = 0;
     for (const key of dirs) this.loadSession(key);
+  }
+
+  private recomputeQuality(rec: MemoryRecord): void {
+    const p = this.profiles.get(rec.profile);
+    if (!p) return;
+    const a = assessFor(rec.fields, p);
+    rec.missing = a.missing;
+    rec.blank = a.blank;
+    rec.quality = a.quality;
+  }
+
+  profileOf(id: string | undefined): Profile {
+    return this.profiles.get(id) || GENERAL_PROFILE;
+  }
+
+  profilesList(): Profile[] {
+    return this.profiles.list();
+  }
+
+  installProfile(raw: unknown): Profile {
+    return this.profiles.install(raw);
+  }
+
+  removeProfile(id: string): boolean {
+    return this.profiles.remove(id);
   }
 
   private ensureSession(sessionId: string): SessionState {
@@ -391,6 +425,11 @@ export class RepoStore {
       const turnNo = input.turn_no && Number(input.turn_no) > 0 ? Math.floor(Number(input.turn_no)) : Math.max(0, ...turns.keys()) + 1;
       const existingName = turns.get(turnNo);
       const existing = existingName ? this.readRecordFile(st, existingName) || undefined : undefined;
+      const wanted = String(input.profile || "").trim();
+      if (existing && wanted && wanted !== existing.profile) {
+        throw new NorthstarError("CONFLICT", `profile cannot change on the same turn (${existing.profile} -> ${wanted})`);
+      }
+      const profile = this.profiles.require(existing ? existing.profile : wanted || this.defaultProfile);
       const built = buildTurn(
         { ...input, session_id: sessionId, turn_no: turnNo },
         {
@@ -400,6 +439,7 @@ export class RepoStore {
           sessionKeyOverride: st.key,
           deviceId: this.deviceId,
           spaceId: this.spaceId,
+          profile,
         },
         existing
       );
@@ -420,6 +460,7 @@ export class RepoStore {
       ok: true,
       id: rec.id,
       kind: rec.kind,
+      profile: rec.profile,
       session_key: st.key,
       turn_no: rec.turn_no,
       next_turn_no: next,
@@ -444,6 +485,11 @@ export class RepoStore {
       const fileName = `range-${String(from).padStart(4, "0")}-${String(to).padStart(4, "0")}.json`;
       const exists = fs.existsSync(path.join(st.dir, fileName));
       const existing = exists ? this.readRecordFile(st, fileName) || undefined : undefined;
+      const wanted = String(input.profile || "").trim();
+      if (existing && wanted && wanted !== existing.profile) {
+        throw new NorthstarError("CONFLICT", `profile cannot change on the same range (${existing.profile} -> ${wanted})`);
+      }
+      const profile = this.profiles.require(existing ? existing.profile : wanted || this.defaultProfile);
       const built = buildRange(
         { ...input, session_id: sessionId, range_from: from, range_to: to },
         {
@@ -453,6 +499,7 @@ export class RepoStore {
           sessionKeyOverride: st.key,
           deviceId: this.deviceId,
           spaceId: this.spaceId,
+          profile,
         },
         existing
       );
@@ -469,6 +516,7 @@ export class RepoStore {
       ok: true,
       id: rec.id,
       kind: "range",
+      profile: rec.profile,
       session_key: st.key,
       turn_no: rec.turn_no,
       next_turn_no: this.nextTurnNo(st.key),
@@ -499,6 +547,7 @@ export class RepoStore {
       items = items.filter(r => r.session_key === key);
     }
     if (query.kind) items = items.filter(r => r.kind === query.kind);
+    if (query.profile) items = items.filter(r => r.profile === query.profile);
     if (query.quality === "incomplete") items = items.filter(r => r.quality !== "complete");
     items.sort((a, b) => b.created_at - a.created_at);
     const total = items.length;
@@ -578,8 +627,9 @@ export class RepoStore {
       if (input.expect_revision != null && Number(input.expect_revision) !== fresh.revision) {
         throw new NorthstarError("CONFLICT", `revision mismatch: expected ${input.expect_revision}, actual ${fresh.revision}`);
       }
-      const patch = input.fields ? partialFields(input.fields) : {};
-      const mergedFields = { ...fresh.fields, ...patch };
+      const profile = this.profileOf(fresh.profile);
+      const patch = input.fields ? partialFields(input.fields, profile) : {};
+      const mergedFields: SevenFields = { ...fresh.fields, ...(patch as Record<string, string>) };
       const now = Date.now();
       const fieldMeta: Record<string, FieldMeta> = { ...(fresh.field_meta || {}) };
       for (const k of Object.keys(patch) as SevenKey[]) {
@@ -597,7 +647,7 @@ export class RepoStore {
         }
         if (rawText !== fresh.raw_text) fieldMeta["raw_text"] = { ts: now, by: this.deviceId };
       }
-      const a = assess(mergedFields);
+      const a = assessFor(mergedFields, profile);
       updated = {
         ...fresh,
         fields: mergedFields,
@@ -743,13 +793,15 @@ export class RepoStore {
   }
 
   private mergeTwo(a: MemoryRecord, b: MemoryRecord): { record: MemoryRecord; conflicts: { field: string; kept: string; discarded: string }[] } {
+    const profile = this.profileOf(a.profile);
+    const keys = profileFieldKeys(profile);
     const fields = { ...a.fields };
     let rawText = a.raw_text;
     const meta: Record<string, FieldMeta> = { ...(a.field_meta || {}) };
     const conflicts: { field: string; kept: string; discarded: string }[] = [];
     const newer = (x: MemoryRecord, key: string): FieldMeta =>
       (x.field_meta && x.field_meta[key]) || { ts: x.updated_at, by: x.updated_by || "legacy" };
-    for (const key of [...SEVEN_FIELD_KEYS, "raw_text"] as string[]) {
+    for (const key of [...keys, "raw_text"] as string[]) {
       const va = key === "raw_text" ? a.raw_text : a.fields[key as SevenKey] || "";
       const vb = key === "raw_text" ? b.raw_text : b.fields[key as SevenKey] || "";
       const ma = newer(a, key);
@@ -769,7 +821,7 @@ export class RepoStore {
       if (va && vb) conflicts.push({ field: key, kept: bWins ? vb : va, discarded: bWins ? va : vb });
     }
     const aNewer = a.updated_at >= b.updated_at;
-    const a2 = assess(fields);
+    const a2 = assessFor(fields, profile);
     return {
       record: {
         ...a,
@@ -911,9 +963,11 @@ export class RepoStore {
   stats(): StatsResult {
     this.maybeRefresh();
     const byKind: Record<string, number> = { turn: 0, range: 0 };
+    const byProfile: Record<string, number> = {};
     let incomplete = 0;
     for (const r of this.byId.values()) {
       byKind[r.kind] = (byKind[r.kind] || 0) + 1;
+      byProfile[r.profile] = (byProfile[r.profile] || 0) + 1;
       if (r.quality !== "complete") incomplete++;
     }
     let sessions = 0;
@@ -929,6 +983,7 @@ export class RepoStore {
       ok: true,
       total: this.byId.size,
       by_kind: byKind,
+      by_profile: byProfile,
       sessions,
       incomplete,
       corrupted: this.corruptedCount,
@@ -992,6 +1047,6 @@ export class RepoStore {
   }
 }
 
-export function recordToText(rec: MemoryRecord): string {
-  return fieldsToContent(rec.fields);
+export function recordToText(rec: MemoryRecord, profile: Profile = GENERAL_PROFILE): string {
+  return fieldsToContent(rec.fields, profile);
 }

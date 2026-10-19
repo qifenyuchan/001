@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 // cli.ts — 命令行：save / recall / search / list / get / stats / range / export
+import fs from "node:fs";
 import { loadConfig } from "./config.js";
 import { RepoStore } from "./store/repo.js";
 import { recall } from "./features/inject.js";
@@ -60,6 +61,7 @@ try {
       const fields = typeof flags.fields === "string" ? JSON.parse(flags.fields) : undefined;
       const res = repo.upsertTurn({
         session_id: typeof flags.session === "string" ? flags.session : "default",
+        profile: typeof flags.profile === "string" ? flags.profile : undefined,
         turn_no: flags.turn ? Number(flags.turn) : undefined,
         fields,
         content: typeof flags.content === "string" ? flags.content : undefined,
@@ -99,6 +101,7 @@ try {
     case "list": {
       const r = repo.list({
         session_key: typeof flags.session === "string" ? flags.session : undefined,
+        profile: typeof flags.profile === "string" ? flags.profile : undefined,
         kind: flags.kind === "range" ? "range" : flags.kind === "turn" ? "turn" : undefined,
         page: flags.page ? Number(flags.page) : 1,
         page_size: flags["page-size"] ? Number(flags["page-size"]) : 20,
@@ -119,6 +122,32 @@ try {
     }
     case "sessions": {
       out({ ok: true, sessions: repo.listSessions(!!flags.all) });
+      break;
+    }
+    case "profile": {
+      const sub = pos[0] || "list";
+      if (sub === "list") {
+        out({ ok: true, profiles: repo.profilesList(), default: "general" });
+      } else if (sub === "install") {
+        const id = String(pos[1] || flags.id || "").trim();
+        if (!/^[a-z0-9_-]{1,32}$/.test(id)) throw new NorthstarError("INVALID_ARG", "usage: profile install <work|story> [--file path]");
+        let raw: unknown;
+        if (typeof flags.file === "string") {
+          raw = JSON.parse(fs.readFileSync(flags.file, "utf8"));
+        } else {
+          const url = typeof flags.url === "string" ? flags.url : `https://raw.githubusercontent.com/qifenyuchan/001/main/profiles/${id}.json`;
+          const resp = await fetch(url);
+          if (!resp.ok) throw new NorthstarError("IO_ERROR", `download failed: HTTP ${resp.status} (${url})`);
+          raw = await resp.json();
+        }
+        const p = repo.installProfile(raw);
+        out({ ok: true, installed: p.id, name: p.name, fields: p.fields.map(f => f.key), dir: config.dataDir + "/profiles" });
+      } else if (sub === "remove") {
+        const id = String(pos[1] || flags.id || "").trim();
+        out({ ok: true, removed: repo.removeProfile(id), id });
+      } else {
+        throw new NorthstarError("INVALID_ARG", `unknown profile subcommand: ${sub}`);
+      }
       break;
     }
     case "sync": {
@@ -170,6 +199,7 @@ try {
           "  node dist/cli.js list [--session id] [--kind turn|range] [--page N] [--page-size 20]",
           "  node dist/cli.js get <id>",
           "  node dist/cli.js sessions [--all]",
+          "  node dist/cli.js profile [list|install work|story|remove <id>]",
           "  node dist/cli.js sync [status|doctor]",
           "  node dist/cli.js stats",
           "  node dist/cli.js range --session <id> --from N --to M",

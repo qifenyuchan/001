@@ -8,7 +8,7 @@ description: 北极星记忆协议（压缩版）。轮首 memory_recall 取上�
 **三条规则**
 
 1. 每个用户回合开始：`memory_recall({session_id})` → 返回文本原样放上下文。
-2. 每个回合结束：`memory_save({session_id, fields:{时间,地点,人物,事情,原因,结果,重点}})`。
+2. 每个回合结束：`memory_save({session_id, fields:{时间,地点,人物,事情,原因,结果,重点}})`（默认 general；装了 work/story 时加 `profile`）。
    **截断也要存**：`truncated:true` + 已有字段 + `raw_text`。正常轮**不要传 raw_text**（省 token）。永不跳过。
 3. 只注入上一轮；几十轮前的事用 `memory_search({query})`，不要求全量注入。
 

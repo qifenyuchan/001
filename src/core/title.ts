@@ -2,11 +2,12 @@
 
 import { asText, safeSlice } from "./text.js";
 import { parseSevenFields } from "./parse.js";
+import { GENERAL_PROFILE, type Profile } from "../store/profiles.js";
 
-export function deriveTitleFromFields(fields: Record<string, string> | null | undefined, fallback?: string): string {
+export function deriveTitleFromFields(fields: Record<string, string> | null | undefined, fallback?: string, profile: Profile = GENERAL_PROFILE): string {
   if (fields) {
-    const shi = asText(fields["事情"]).trim();
-    if (shi.length >= 2) return safeTitle(shi);
+    const t = asText(fields[profile.title_field] || (profile.id === "general" ? fields["事情"] : "")).trim();
+    if (t.length >= 2) return safeTitle(t);
   }
   const raw = asText(fallback);
   const pf7 = parseSevenFields(raw);

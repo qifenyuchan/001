@@ -1,0 +1,18 @@
+{
+  "schema": 1,
+  "id": "story",
+  "name": "长剧情",
+  "description": "长篇叙事 / 角色扮演：记录时间线、场景、人物关系、事件、伏笔与当前状态，保持连续性。",
+  "title_field": "事件",
+  "excerpt_field": "状态",
+  "fields": [
+    { "key": "时间线", "label": "时间线", "weight": 1, "max_chars": 80, "hint": "故事内时间或章节" },
+    { "key": "场景", "label": "场景", "weight": 1, "max_chars": 150, "hint": "地点、氛围" },
+    { "key": "人物", "label": "人物", "weight": 2, "max_chars": 300, "hint": "出场人物与状态" },
+    { "key": "关系", "label": "关系变化", "weight": 2, "max_chars": 400, "hint": "信任、冲突、立场变化" },
+    { "key": "事件", "label": "事件", "weight": 3, "required": true, "max_chars": 500, "hint": "本轮发生了什么" },
+    { "key": "伏笔", "label": "伏笔 / 线索", "weight": 2, "max_chars": 400, "hint": "埋下或回收的线索" },
+    { "key": "状态", "label": "当前状态", "weight": 3, "required": true, "max_chars": 400, "hint": "人物/局势此刻的状态" },
+    { "key": "下一步", "label": "下一步 / 走向", "weight": 1, "max_chars": 300, "hint": "可能的推进方向" }
+  ]
+}

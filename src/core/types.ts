@@ -2,8 +2,9 @@
 // 铁律：一条记录 = 一个文件 = 一个事实；派生值（content/title）不落盘。
 
 export const SEVEN_FIELD_KEYS = ["时间", "地点", "人物", "事情", "原因", "结果", "重点"] as const;
-export type SevenKey = (typeof SEVEN_FIELD_KEYS)[number];
-export type SevenFields = Record<SevenKey, string>;
+// 字段方案（profile）可扩展：键不再限定为七字段，但默认 general 仍是这七个
+export type SevenKey = string;
+export type SevenFields = Record<string, string>;
 
 export type RecordKind = "turn" | "range";
 export type Quality = "complete" | "partial" | "degraded";
@@ -35,6 +36,7 @@ export interface MemoryRecord {
   schema: 1;
   id: string;
   kind: RecordKind;
+  profile: string;
   space_id: string;
   session_id: string;
   session_key: string;
@@ -97,6 +99,7 @@ export interface SessionView {
 
 export interface SaveInput {
   session_id?: string;
+  profile?: string;
   turn_no?: number;
   fields?: Record<string, unknown> | null;
   content?: string;
@@ -115,6 +118,7 @@ export interface SaveResult {
   ok: boolean;
   id: string;
   kind: RecordKind;
+  profile: string;
   session_key: string;
   turn_no: number;
   next_turn_no: number;
@@ -127,6 +131,7 @@ export interface SaveResult {
 
 export interface ListQuery {
   session_key?: string;
+  profile?: string;
   kind?: RecordKind;
   quality?: "incomplete";
   page?: number;
@@ -174,6 +179,7 @@ export interface StatsResult {
   ok: boolean;
   total: number;
   by_kind: Record<string, number>;
+  by_profile?: Record<string, number>;
   sessions: number;
   incomplete: number;
   corrupted: number;
@@ -201,7 +207,9 @@ export type ErrorCode =
   | "CONFLICT"
   | "IO_ERROR"
   | "CORRUPT_RECORD"
-  | "LOCK_TIMEOUT";
+  | "LOCK_TIMEOUT"
+  | "INVALID_PROFILE"
+  | "PROFILE_NOT_FOUND";
 
 export class NorthstarError extends Error {
   code: ErrorCode;

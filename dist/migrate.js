@@ -169,6 +169,7 @@ function buildLegacyRecord(e, chat, key, turnNo, kind) {
         schema: 1,
         id,
         kind,
+        profile: "general",
         space_id: "personal",
         session_id: chat,
         session_key: key,
