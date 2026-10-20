@@ -1,0 +1,12 @@
+{
+  "id": "export-obsidian",
+  "name": "Obsidian 导出包",
+  "version": "1.0.0",
+  "apiVersion": "^1",
+  "requires": { "core": ">=2.6.0" },
+  "provides": {
+    "cli": ["obsidian"],
+    "hooks": ["export"]
+  },
+  "description": "把记忆导出为 Obsidian 兼容的 Markdown vault（一轮一个 .md + 会话索引 + 双向链接）"
+}

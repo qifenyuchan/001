@@ -8,6 +8,7 @@ import { startRpcServer } from "./mcp/jsonrpc.js";
 import { startHttpRpcServer } from "./mcp/http.js";
 import { startUiServer } from "./ui/http.js";
 import { isLoopbackHost } from "./auth.js";
+import { PackHost } from "./packs/host.js";
 
 // stdout 是 MCP 协议通道：任何 console.log 一律转 stderr
 console.log = (...args: unknown[]) => console.error(...args);
@@ -54,6 +55,12 @@ function parseArgs(argv: string[]): CliOptions {
       case "--recall-max-chars":
         out.recallMaxChars = Number(next());
         break;
+      case "--packs-dir":
+        out.packsDir = next();
+        break;
+      case "--no-packs":
+        out.noPacks = true;
+        break;
       default:
         break;
     }
@@ -89,8 +96,27 @@ const repo = new RepoStore({
 });
 repo.open();
 
-const tools = createTools(repo, config);
-const toolDefs = defsFor(config.toolsMode);
+// 包宿主：加载失败只降级，绝不让服务起不来
+let host: PackHost | undefined;
+if (!config.noPacks) {
+  host = new PackHost({
+    packsDir: config.packsDir,
+    dataDir: config.dataDir,
+    repo,
+    coreVersion: "2.7.0",
+  });
+  try {
+    await host.load();
+    const loaded = host.list().filter(p => p.loaded);
+    if (loaded.length) console.error(`[northstar] packs: ${loaded.map(p => `${p.id}@${p.version}`).join(", ")}`);
+  } catch (e: any) {
+    console.error(`[northstar] pack load failed (core continues): ${e && e.message}`);
+    host = undefined;
+  }
+}
+
+const tools = createTools(repo, config, host);
+const toolDefs = defsFor(config.toolsMode, host);
 const servers: Array<import("node:http").Server> = [];
 
 if (!config.noUi) {
@@ -111,7 +137,7 @@ if (config.httpPort > 0 && !config.noMcp) {
   startHttpRpcServer(
     {
       serverName: "northstar-memory",
-      serverVersion: "2.6.0",
+      serverVersion: "2.7.0",
       instructions: INSTRUCTIONS,
       tools: toolDefs,
       callTool: tools.callTool,
@@ -133,7 +159,7 @@ if (config.httpPort > 0 && !config.noMcp) {
 if (!config.uiOnly && !config.noMcp) {
   startRpcServer({
     serverName: "northstar-memory",
-    serverVersion: "2.6.0",
+    serverVersion: "2.7.0",
     instructions: INSTRUCTIONS,
     tools: toolDefs,
     callTool: tools.callTool,

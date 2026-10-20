@@ -2,7 +2,7 @@
 import { NorthstarError, SEVEN_FIELD_KEYS } from "../core/types.js";
 import { safeSlice, truncateWindow } from "../core/text.js";
 import { deriveTags } from "../core/title.js";
-import { genId, normTags, sanitizeKey, today, isSafeId } from "../core/util.js";
+import { genId, normTags, sanitizeKey, today, isSafeId, isSafeKey } from "../core/util.js";
 import { GENERAL_PROFILE, profileFieldKeys } from "./profiles.js";
 const ALIASES = {
     时间: "时间", time: "时间", date: "时间", when: "时间",
@@ -248,7 +248,7 @@ export function ensureRecordShape(value) {
         return null;
     if (v.schema !== 1 || !v.fields || (v.kind !== "turn" && v.kind !== "range"))
         return null;
-    if (!isSafeId(v.id) || !isSafeId(v.session_key))
+    if (!isSafeId(v.id) || !isSafeKey(v.session_key))
         return null;
     const turnNo = Number(v.turn_no);
     if (!Number.isSafeInteger(turnNo) || turnNo < 1 || turnNo > 1000000)

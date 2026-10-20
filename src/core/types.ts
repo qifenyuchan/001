@@ -163,6 +163,8 @@ export interface RecallQuery {
   before_turn_no?: number;
   scope?: "turn" | "range";
   max_chars?: number;
+  /** 当前用户输入（可选）：仅用于让已安装的包做触发式补充，核心不依赖它 */
+  input?: string;
 }
 
 export interface RecallResult {

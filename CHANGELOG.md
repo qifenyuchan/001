@@ -1,5 +1,17 @@
 # Changelog
 
+## 2.7.0 — 2026-10-20
+
+- 新增**本体 + 升级包**机制：能力以包的形式按需安装，不装包本体完整可用
+- 包 API：`registerProfile` / `registerTool` / `registerCli` + 四个同步 hook（`compose` / `score` / `onSave` / `export`）
+- 工具集随已装包变化：lite 只带核心 3 个 + 包内标 `default:true` 的工具
+- 包隔离：加载失败 / hook 抛错 / 派生数据缺失只降级，核心照常启动；连续失败 10 次自动禁用
+- CLI `pack list|install|enable|disable|remove|doctor|rebuild`；派生数据在 `data/.packs/<id>/`，可删可重建
+- 首个包 `export-obsidian`：导出 Obsidian 兼容 Markdown vault（一轮一笔记 + 会话索引 + 双向链接）
+- `memory_recall` 新增可选 `input` 参数：已装包可据此做触发式补充，仍受预算约束
+- 修复：中文会话名被清洗成 `default-<hash>`（`sanitizeKey` 与仓库目录、记录校验三处放宽为 Unicode 字母数字）
+- 测试 74 → 85（新增 11 项包机制回归）
+
 ## 2.6.0 — 2026-10-20
 
 - 表格方案收敛为两套：`general`（内置）与 `custom`（可安装、可改）

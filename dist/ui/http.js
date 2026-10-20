@@ -183,7 +183,7 @@ export function createUiServer(repo, config) {
                 return;
             }
             if (req.method === "GET" && p === "/api/health") {
-                json(res, 200, { ok: true, name: "northstar-memory", version: "2.6.0" });
+                json(res, 200, { ok: true, name: "northstar-memory", version: "2.7.0" });
                 return;
             }
             if (req.method === "GET" && p === "/api/stats") {

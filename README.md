@@ -122,6 +122,27 @@ node dist/cli.js profile list
 
 ![自定义方案](docs/screenshots/profile-custom.png)
 
+## 升级包（按需安装）
+
+本体只带核心能力；额外能力以「包」的形式安装，**不装也能完整使用**。
+
+```bash
+node dist/cli.js pack list                      # 已装 / 已启用
+node dist/cli.js pack install packs/export-obsidian
+node dist/cli.js pack doctor                    # 兼容性与完整性检查
+node dist/cli.js obsidian --out ./vault         # 包注册的命令
+node dist/cli.js pack disable export-obsidian   # 停用但不删
+node dist/cli.js pack remove export-obsidian    # 卸载；记录里的字段仍只读可见
+node dist/cli.js pack rebuild export-obsidian   # 派生数据从真源重放
+```
+
+- 已装包会把**自己的工具**并入 `tools/list`（lite 只带标了 `default` 的），工具定义随包装卸，不占没必要的 token。
+- 包可以提供：字段方案、MCP 工具、CLI 命令、四个 hook（`compose` 注入补充 / `score` 排序微调 / `onSave` 维护派生数据 / `export` 导出格式）。
+- 包加载失败、hook 抛错、派生数据损坏都只降级，**核心照常启动**；连续失败 10 次自动停用。
+- 派生数据在 `data/.packs/<id>/`，可随时删掉重建，不参与同步。
+
+现有包：`export-obsidian`（导出 Obsidian 兼容 Markdown vault）。架构与写包规范见 **[docs/PACKS.md](docs/PACKS.md)**。
+
 ## 跨设备 / 跨网络（本地优先）
 
 **不共用一台设备，也不托管用户数据。** 每台设备都有完整副本，同步走你自己的存储：
@@ -161,8 +182,9 @@ node dist/server.js --data ./data --http-host 0.0.0.0 --http-port 8788 --token <
 | `range_every` | `10` | 每 N 轮自动生成范围总结 |
 | `recall_max_chars` | `1200` | 注入块预算 |
 | `raw_head` / `raw_tail` | `1200` / `600` | 原文头尾窗口 |
+| `packs_dir` | `~/.northstar/packs` | 升级包安装目录（代码，不进数据目录） |
 
-环境变量：`TM_DATA_DIR`、`TM_UI_PORT`、`TM_UI_HOST`、`TM_HTTP_PORT`、`TM_HTTP_HOST`、`TM_AUTH_TOKEN`、`TM_RANGE_EVERY`、`TM_TOOLS_MODE`（lite/full）、`TM_DEVICE_ID`。
+环境变量：`TM_DATA_DIR`、`TM_UI_PORT`、`TM_UI_HOST`、`TM_HTTP_PORT`、`TM_HTTP_HOST`、`TM_AUTH_TOKEN`、`TM_RANGE_EVERY`、`TM_TOOLS_MODE`（lite/full）、`TM_PACKS_DIR`、`TM_DEVICE_ID`。
 
 ## 数据布局（单一真源，无镜像、无 SQLite）
 
@@ -178,6 +200,7 @@ data/
   conflicts/                        冲突副本归档与合并报告
   .trash/                           编辑快照（可回滚）
   .locks/                           短写锁
+  .packs/<pack_id>/                 升级包派生数据（索引/缓存；可删可重建，不参与同步）
   logs/server.log                   运行日志（5MB 轮转）
 ```
 
@@ -206,7 +229,7 @@ node dist/migrate.js --apply   --from "<旧>/pc_host/data" --data ./data --repor
 ## 测试
 
 ```bash
-npm test        # 12 套件 74 断言：schema/store/recall/range/search/mcp/ui/sync/migrate/auth/security/profiles
+npm test        # 13 套件 85 断言：schema/store/recall/range/search/mcp/ui/sync/migrate/auth/security/profiles/packs
 npm run build   # TypeScript 构建（仅开发需要；dist/ 已随包提供）
 ```
 

@@ -5,6 +5,7 @@ import { RepoStore } from "../store/repo.js";
 import { safeSlice } from "../core/text.js";
 import { fmtDateTime, sanitizeKey } from "../core/util.js";
 import type { Profile } from "../store/profiles.js";
+import type { PackHost } from "../packs/host.js";
 
 const QUALITY_LABEL: Record<string, string> = {
   complete: "完整",
@@ -63,7 +64,7 @@ export function formatRangeBlock(rec: MemoryRecord, profile: Profile, maxChars: 
   return text.length > maxChars ? safeSlice(text, Math.max(80, maxChars - 18)) + "\n（已截断，完整内容用 memory_get）" : text;
 }
 
-export function recall(repo: RepoStore, query: RecallQuery, maxChars: number): RecallResult {
+export function recall(repo: RepoStore, query: RecallQuery, maxChars: number, host?: PackHost): RecallResult {
   const rawKey = String(query.session_key || query.session_id || "").trim();
   const key = sanitizeKey(rawKey);
   if (query.scope === "range") {
@@ -101,6 +102,21 @@ export function recall(repo: RepoStore, query: RecallQuery, maxChars: number): R
   // 先预留提示长度，保证最终块不超过预算（P2-1）
   let text = formatTurnBlock(prev.record, repo.profileOf(prev.record.profile), Math.max(160, maxChars - hint.length));
   text += hint;
+  // 已安装的包可以补充上下文（触发命中 / 真相层提示），但只能在剩余预算内
+  if (host) {
+    const room = maxChars - text.length - 2;
+    if (room > 40) {
+      try {
+        const extra = host.compose({ prev: prev.record, input: query.input, maxChars: room });
+        if (extra) {
+          text += "\n" + extra;
+          if (text.length > maxChars) text = safeSlice(text, maxChars);
+        }
+      } catch {
+        /* 包的补充失败绝不影响上一轮注入 */
+      }
+    }
+  }
   if (text.length > maxChars) text = safeSlice(text, maxChars);
   return { ok: true, found: true, text, record: prev.record, next_turn_no: prev.next_turn_no, gap };
 }

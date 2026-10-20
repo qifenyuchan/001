@@ -179,7 +179,7 @@ export class RepoStore {
   }
 
   private loadSession(key: string): SessionState {
-    if (!/^[a-z0-9_-]{1,64}$/.test(key)) {
+    if (!/^[\p{L}\p{N}_-]{1,64}$/u.test(key)) {
       logWarn(`skip unsafe session dir name: ${key}`);
       const now = Date.now();
       const meta: SessionMeta = {
@@ -905,7 +905,7 @@ export class RepoStore {
     if (tombRead.ok && tombRead.value && tombRead.value.record) {
       const rec = ensureRecordShape(tombRead.value.record);
       if (!rec) throw new NorthstarError("CORRUPT_RECORD", "tombstone record is corrupted");
-      if (!/^[a-z0-9_-]{1,64}$/.test(rec.session_key)) throw new NorthstarError("INVALID_ARG", "invalid session key in tombstone");
+      if (!/^[\p{L}\p{N}_-]{1,64}$/u.test(rec.session_key)) throw new NorthstarError("INVALID_ARG", "invalid session key in tombstone");
       const st = this.sessions.get(rec.session_key) || this.loadSession(rec.session_key);
       const target = this.fileFor(st, rec);
       if (fs.existsSync(target)) throw new NorthstarError("CONFLICT", `target already exists: ${path.basename(target)}`);
@@ -928,7 +928,7 @@ export class RepoStore {
     const r = readJson<TrashItem>(file);
     if (!r.ok || !r.value || !r.value.record) throw new NorthstarError("NOT_FOUND", `trash item not found: ${trashId}`);
     const rec = r.value.record;
-    if (!/^[a-z0-9_-]{1,64}$/.test(rec.session_key)) throw new NorthstarError("INVALID_ARG", "invalid session key in trash item");
+    if (!/^[\p{L}\p{N}_-]{1,64}$/u.test(rec.session_key)) throw new NorthstarError("INVALID_ARG", "invalid session key in trash item");
     const st = this.sessions.get(rec.session_key) || this.loadSession(rec.session_key);
     const target = this.fileFor(st, rec);
     // P1-1：编辑快照恢复 = 用快照覆盖当前版本（先快照当前，再写回，revision 递增）

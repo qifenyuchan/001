@@ -7,6 +7,7 @@ import { scoreRecord } from "../core/score.js";
 import { deriveTitleFromFields } from "../core/title.js";
 import { safeSlice } from "../core/text.js";
 import { sanitizeKey } from "../core/util.js";
+import type { PackHost } from "../packs/host.js";
 
 export interface SearchHit {
   id: string;
@@ -19,7 +20,12 @@ export interface SearchHit {
   score: number;
 }
 
-export function searchRecords(repo: RepoStore, query: string, opts: { limit?: number; session_key?: string } = {}): { ok: boolean; total: number; results: SearchHit[] } {
+export function searchRecords(
+  repo: RepoStore,
+  query: string,
+  opts: { limit?: number; session_key?: string } = {},
+  host?: PackHost
+): { ok: boolean; total: number; results: SearchHit[] } {
   const terms = tokenize(query);
   const limit = Math.max(1, Math.min(50, Math.floor(Number(opts.limit) || 5)));
   if (!terms.length) return { ok: true, total: 0, results: [] };
@@ -30,7 +36,9 @@ export function searchRecords(repo: RepoStore, query: string, opts: { limit?: nu
   }
   const scored: { rec: MemoryRecord; score: number }[] = [];
   for (const rec of records) {
-    const s = scoreRecord(rec, terms, repo.profileOf(rec.profile));
+    let s = scoreRecord(rec, terms, repo.profileOf(rec.profile));
+    // 包的 score hook 只在原本命中时调整排序，不负责「从无到有」捞记录
+    if (s > 0 && host) s += host.score(rec, { query, terms });
     if (s > 0) scored.push({ rec, score: s });
   }
   scored.sort((a, b) => b.score - a.score || b.rec.created_at - a.rec.created_at);

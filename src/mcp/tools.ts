@@ -10,6 +10,7 @@ import { deriveTitleFromFields } from "../core/title.js";
 import { contentToFields } from "../store/schema.js";
 import type { ToolDef } from "./jsonrpc.js";
 import type { Config } from "../config.js";
+import type { PackHost } from "../packs/host.js";
 
 export type ToolMode = "lite" | "full";
 export const LITE_TOOL_NAMES = ["memory_save", "memory_recall", "memory_search"] as const;
@@ -65,6 +66,7 @@ export const TOOL_DEFS: ToolDef[] = [
         before_turn_no: { type: "number", description: "Optional boundary: recall the turn before this number" },
         scope: { type: "string", enum: ["turn", "range"], description: "turn (default) or latest range summary" },
         max_chars: { type: "number", description: "Budget for the injected block (default 1200)" },
+        input: { type: "string", description: "Optional: the current user message. Installed packs may inject extra context when it matches their triggers." },
       },
       required: [],
     },
@@ -135,7 +137,7 @@ export const TOOL_DEFS: ToolDef[] = [
   },
 ];
 
-export function createTools(repo: RepoStore, config: Config) {
+export function createTools(repo: RepoStore, config: Config, host?: PackHost) {
   function ok(payload: unknown) {
     return { content: [{ type: "text", text: JSON.stringify(payload) }] };
   }
@@ -181,6 +183,14 @@ export function createTools(repo: RepoStore, config: Config) {
       source: "agent",
     };
     const result = kind === "range" ? repo.upsertRange(input) : repo.upsertTurn(input);
+    if (host) {
+      try {
+        const saved = repo.get(result.id);
+        if (saved) host.onSave(saved, null);
+      } catch {
+        /* 包的观察失败不影响保存 */
+      }
+    }
     let rangeAuto: { id: string; range: unknown } | undefined;
     if (result.range_due && kind === "turn") {
       try {
@@ -215,8 +225,10 @@ export function createTools(repo: RepoStore, config: Config) {
         before_turn_no: args.before_turn_no,
         scope: args.scope === "range" ? "range" : "turn",
         max_chars: args.max_chars,
+        input: typeof args.input === "string" ? args.input : undefined,
       },
-      Math.max(200, Number(args.max_chars) || config.recallMaxChars)
+      Math.max(200, Number(args.max_chars) || config.recallMaxChars),
+      host
     );
     return ok({
       ok: true,
@@ -230,10 +242,15 @@ export function createTools(repo: RepoStore, config: Config) {
   }
 
   function searchTool(args: Record<string, any>) {
-    const r = searchRecords(repo, String(args.query || ""), {
-      limit: args.limit,
-      session_key: args.session_id ? String(args.session_id) : undefined,
-    });
+    const r = searchRecords(
+      repo,
+      String(args.query || ""),
+      {
+        limit: args.limit,
+        session_key: args.session_id ? String(args.session_id) : undefined,
+      },
+      host
+    );
     return ok(r);
   }
 
@@ -269,7 +286,16 @@ export function createTools(repo: RepoStore, config: Config) {
 
   function deleteTool(args: Record<string, any>) {
     if (args.confirm !== true) throw new NorthstarError("INVALID_ARG", "confirm must be true to delete");
-    const r = repo.softDelete(String(args.id || ""));
+    const id = String(args.id || "");
+    const before = repo.get(id);
+    const r = repo.softDelete(id);
+    if (host) {
+      try {
+        host.onSave(null, before || null);
+      } catch {
+        /* 删除已生效，包的观察失败不回滚 */
+      }
+    }
     return ok({ ok: true, trash_id: r.trash_id });
   }
 
@@ -332,8 +358,13 @@ export function createTools(repo: RepoStore, config: Config) {
             return restoreTool(args);
           case "memory_stats":
             return statsTool();
-          default:
+          default: {
+            if (host) {
+              const r = host.callTool(name, args);
+              if (r.found) return ok(r.value);
+            }
             throw new NorthstarError("INVALID_ARG", `unknown tool: ${name}`);
+          }
         }
       } catch (e) {
         return fail(e);
@@ -344,9 +375,12 @@ export function createTools(repo: RepoStore, config: Config) {
   };
 }
 
-export function defsFor(mode: ToolMode): ToolDef[] {
-  if (mode === "lite") return TOOL_DEFS.filter(t => (LITE_TOOL_NAMES as readonly string[]).includes(t.name));
-  return TOOL_DEFS;
+export function defsFor(mode: ToolMode, host?: PackHost): ToolDef[] {
+  const core = mode === "lite" ? TOOL_DEFS.filter(t => (LITE_TOOL_NAMES as readonly string[]).includes(t.name)) : TOOL_DEFS;
+  if (!host) return core;
+  const names = new Set(core.map(t => t.name));
+  const extra = host.toolDefs(mode).filter(t => !names.has(t.name));
+  return extra.length ? [...core, ...extra] : core;
 }
 
 export const INSTRUCTIONS = [

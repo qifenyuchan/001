@@ -4,7 +4,7 @@ import type { MemoryRecord, Quality, RangeMeta, SaveInput, SevenFields } from ".
 import { NorthstarError, SEVEN_FIELD_KEYS } from "../core/types.js";
 import { safeSlice, truncateWindow } from "../core/text.js";
 import { deriveTags } from "../core/title.js";
-import { genId, normTags, sanitizeKey, today, isSafeId } from "../core/util.js";
+import { genId, normTags, sanitizeKey, today, isSafeId, isSafeKey } from "../core/util.js";
 import { GENERAL_PROFILE, profileFieldKeys, type Profile } from "./profiles.js";
 
 const ALIASES: Record<string, string> = {
@@ -251,7 +251,7 @@ export function ensureRecordShape(value: unknown): MemoryRecord | null {
   const v = value as Partial<MemoryRecord> | null;
   if (!v || typeof v !== "object") return null;
   if (v.schema !== 1 || !v.fields || (v.kind !== "turn" && v.kind !== "range")) return null;
-  if (!isSafeId(v.id) || !isSafeId(v.session_key)) return null;
+  if (!isSafeId(v.id) || !isSafeKey(v.session_key)) return null;
   const turnNo = Number(v.turn_no);
   if (!Number.isSafeInteger(turnNo) || turnNo < 1 || turnNo > 1000000) return null;
   const profile = typeof v.profile === "string" && /^[a-z0-9_-]{1,32}$/.test(v.profile) ? v.profile : "general";

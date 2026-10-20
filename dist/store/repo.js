@@ -122,7 +122,7 @@ export class RepoStore {
         return path.join(this.sessionsDir, key);
     }
     loadSession(key) {
-        if (!/^[a-z0-9_-]{1,64}$/.test(key)) {
+        if (!/^[\p{L}\p{N}_-]{1,64}$/u.test(key)) {
             logWarn(`skip unsafe session dir name: ${key}`);
             const now = Date.now();
             const meta = {
@@ -865,7 +865,7 @@ export class RepoStore {
             const rec = ensureRecordShape(tombRead.value.record);
             if (!rec)
                 throw new NorthstarError("CORRUPT_RECORD", "tombstone record is corrupted");
-            if (!/^[a-z0-9_-]{1,64}$/.test(rec.session_key))
+            if (!/^[\p{L}\p{N}_-]{1,64}$/u.test(rec.session_key))
                 throw new NorthstarError("INVALID_ARG", "invalid session key in tombstone");
             const st = this.sessions.get(rec.session_key) || this.loadSession(rec.session_key);
             const target = this.fileFor(st, rec);
@@ -892,7 +892,7 @@ export class RepoStore {
         if (!r.ok || !r.value || !r.value.record)
             throw new NorthstarError("NOT_FOUND", `trash item not found: ${trashId}`);
         const rec = r.value.record;
-        if (!/^[a-z0-9_-]{1,64}$/.test(rec.session_key))
+        if (!/^[\p{L}\p{N}_-]{1,64}$/u.test(rec.session_key))
             throw new NorthstarError("INVALID_ARG", "invalid session key in trash item");
         const st = this.sessions.get(rec.session_key) || this.loadSession(rec.session_key);
         const target = this.fileFor(st, rec);

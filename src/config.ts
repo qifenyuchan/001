@@ -1,5 +1,6 @@
 // config.ts — 配置解析：CLI > 环境变量 > tm.config.json > 默认值
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -18,6 +19,8 @@ export interface CliOptions {
   uiOnly?: boolean;
   rangeEvery?: number;
   recallMaxChars?: number;
+  packsDir?: string;
+  noPacks?: boolean;
 }
 
 export interface Config {
@@ -37,6 +40,8 @@ export interface Config {
   rawHead: number;
   rawTail: number;
   logFile: string;
+  packsDir: string;
+  noPacks: boolean;
 }
 
 export function loadConfig(cli: CliOptions = {}): Config {
@@ -58,6 +63,8 @@ export function loadConfig(cli: CliOptions = {}): Config {
   const recallMaxChars = Math.max(200, Number(cli.recallMaxChars ?? fileCfg.recall_max_chars ?? 1200));
   const rawHead = Math.max(200, Number(fileCfg.raw_head ?? 1200));
   const rawTail = Math.max(0, Number(fileCfg.raw_tail ?? 600));
+  const packsRaw = cli.packsDir || process.env.TM_PACKS_DIR || fileCfg.packs_dir || path.join(os.homedir(), ".northstar", "packs");
+  const packsDir = path.isAbsolute(packsRaw) ? packsRaw : path.resolve(PACKAGE_ROOT, packsRaw);
   return {
     root: PACKAGE_ROOT,
     dataDir,
@@ -75,5 +82,7 @@ export function loadConfig(cli: CliOptions = {}): Config {
     rawHead,
     rawTail,
     logFile: path.join(dataDir, "logs", "server.log"),
+    packsDir,
+    noPacks: !!cli.noPacks,
   };
 }

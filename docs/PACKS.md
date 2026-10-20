@@ -1,7 +1,21 @@
 # 本体 + 升级包：模块化架构规范
 
-> 生成时间：2026-10-20　|　状态：**设计稿，未实现**　|　前置：`QUALITY.md`（质量门禁）、`UPGRADE-PLAN.md`（六个包的内容）
+> 生成时间：2026-10-20　|　状态：**v1 已实现（2.7.0）**　|　前置：`QUALITY.md`（质量门禁）、`UPGRADE-PLAN.md`（六个包的内容）
 > 目标：**需要什么就装什么**——本体保持极小，能力以「包」的形式独立安装、独立卸载。
+
+## 0.1 实现状态（2.7.0）
+
+已落地：`src/packs/{types,host}.ts`、CLI `pack` 七个命令、四个 hook 接入（compose 在注入、score 在检索、onSave 在保存/删除、export 在导出）、工具集按包合并、首个包 `packs/export-obsidian`、11 项回归测试。
+
+与设计稿的三处偏差（以实现为准）：
+
+| 设计稿 | 实际 | 原因 |
+|---|---|---|
+| hook 有超时（50/5/100ms）并中断 | hook **必须同步**；超时只记告警，不中断 | 同步函数无法抢占；异步 hook 会让核心路径全部变 async |
+| `~/.northstar/pack-state.json` | `<packsDir>/state.json` | 状态跟着安装目录走，便于整体迁移与测试隔离 |
+| `install` 支持 npm / git | v1 只支持**本地路径** | 从网络装代码需要额外的信任与校验设计，先不做 |
+
+另：装载时若包目录缺 `package.json`，会自动补 `{"type":"module"}`——否则 Node 会把包的 `.js` 当 CJS，`export` 语法直接报错。
 
 ## 0. 为什么要拆
 
@@ -143,8 +157,9 @@ try {
 }
 ```
 
-- 每个 hook 调用包一层 `withTimeout`（默认 `compose` 50ms、`score` 5ms、`onSave` 100ms）；
-- 超时或抛错 → 该 hook 本次跳过 + 计数，连续失败 10 次自动 disable 并提示；
+- 每个 hook 调用包一层 try/catch（默认预算 `compose` 50ms、`score` 5ms、`onSave` 100ms、`export` 2000ms）；
+- **hook 必须同步**：返回 Promise 会被忽略并告警。超时只记告警、不中断（同步代码无法抢占）；
+- 抛错 → 该 hook 本次跳过 + 失败计数，连续 10 次自动 disable 并提示；
 - 派生数据缺失/损坏 → 自动回退核心路径（全量扫描），并在 `pack doctor` 里报出来。
 
 **这一节的每条都必须有对应的测试**，否则包机制会把「单点故障」升级成「全局故障」。

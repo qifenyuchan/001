@@ -4,7 +4,7 @@ import { scoreRecord } from "../core/score.js";
 import { deriveTitleFromFields } from "../core/title.js";
 import { safeSlice } from "../core/text.js";
 import { sanitizeKey } from "../core/util.js";
-export function searchRecords(repo, query, opts = {}) {
+export function searchRecords(repo, query, opts = {}, host) {
     const terms = tokenize(query);
     const limit = Math.max(1, Math.min(50, Math.floor(Number(opts.limit) || 5)));
     if (!terms.length)
@@ -16,7 +16,10 @@ export function searchRecords(repo, query, opts = {}) {
     }
     const scored = [];
     for (const rec of records) {
-        const s = scoreRecord(rec, terms, repo.profileOf(rec.profile));
+        let s = scoreRecord(rec, terms, repo.profileOf(rec.profile));
+        // 包的 score hook 只在原本命中时调整排序，不负责「从无到有」捞记录
+        if (s > 0 && host)
+            s += host.score(rec, { query, terms });
         if (s > 0)
             scored.push({ rec, score: s });
     }
