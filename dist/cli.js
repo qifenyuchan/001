@@ -8,6 +8,7 @@ import { searchRecords } from "./features/search.js";
 import { buildAutoRange } from "./features/range.js";
 import { NorthstarError } from "./core/types.js";
 import { PackHost } from "./packs/host.js";
+import { TOOL_DEFS } from "./mcp/tools.js";
 function parseFlags(argv) {
     const flags = {};
     const pos = [];
@@ -61,7 +62,8 @@ if (!config.noPacks) {
         packsDir: config.packsDir,
         dataDir: config.dataDir,
         repo,
-        coreVersion: "2.11.1",
+        coreVersion: "2.11.2",
+        reservedTools: TOOL_DEFS.map(t => t.name),
         log: {
             info: () => { },
             warn: (s) => process.stderr.write(`[pack] WARN ${s}\n`),

@@ -3,7 +3,7 @@
 import { loadConfig, PACKAGE_ROOT } from "./config.js";
 import { initLog, logError, logInfo, logWarn } from "./log.js";
 import { RepoStore } from "./store/repo.js";
-import { createTools, INSTRUCTIONS, defsFor } from "./mcp/tools.js";
+import { createTools, INSTRUCTIONS, defsFor, TOOL_DEFS } from "./mcp/tools.js";
 import { startRpcServer } from "./mcp/jsonrpc.js";
 import { startHttpRpcServer } from "./mcp/http.js";
 import { startUiServer } from "./ui/http.js";
@@ -92,7 +92,8 @@ if (!config.noPacks) {
         packsDir: config.packsDir,
         dataDir: config.dataDir,
         repo,
-        coreVersion: "2.11.1",
+        coreVersion: "2.11.2",
+        reservedTools: TOOL_DEFS.map(t => t.name),
     });
     try {
         await host.load();
@@ -124,7 +125,7 @@ if (!config.noUi) {
 if (config.httpPort > 0 && !config.noMcp) {
     startHttpRpcServer({
         serverName: "northstar-memory",
-        serverVersion: "2.11.1",
+        serverVersion: "2.11.2",
         instructions: INSTRUCTIONS,
         tools: toolDefs,
         callTool: tools.callTool,
@@ -142,7 +143,7 @@ if (config.httpPort > 0 && !config.noMcp) {
 if (!config.uiOnly && !config.noMcp) {
     startRpcServer({
         serverName: "northstar-memory",
-        serverVersion: "2.11.1",
+        serverVersion: "2.11.2",
         instructions: INSTRUCTIONS,
         tools: toolDefs,
         callTool: tools.callTool,

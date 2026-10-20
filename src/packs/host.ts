@@ -55,6 +55,8 @@ export interface PackHostOptions {
   dataDir: string;
   repo: RepoStore;
   coreVersion: string;
+  /** 核心已占用的工具名：包不能再注册同名工具（避免静默覆盖 memory_save 之类） */
+  reservedTools?: string[];
   log?: PackLogger;
 }
 
@@ -165,7 +167,8 @@ export class PackHost {
       dirs = fs
         .readdirSync(this.opts.packsDir, { withFileTypes: true })
         .filter(e => e.isDirectory())
-        .map(e => path.join(this.opts.packsDir, e.name));
+        .map(e => path.join(this.opts.packsDir, e.name))
+        .sort((a, b) => a.localeCompare(b));
     } catch (e: any) {
       this.log.warn(`cannot read packs dir: ${e && e.message}`);
       return;
@@ -238,8 +241,8 @@ export class PackHost {
       },
       registerTool: (def: ToolDef, handler: (args: Record<string, any>) => unknown, o?: { default?: boolean }) => {
         if (!def || typeof def.name !== "string" || !def.name) throw new Error("invalid tool def");
-        if (reserved.has(def.name) || tools.some(t => t.def.name === def.name)) {
-          this.log.warn(`${manifest.id}: tool ${def.name} conflicts, skipped`);
+        if (reserved.has(def.name) || tools.some(t => t.def.name === def.name) || this.hasTool(def.name)) {
+          this.log.warn(`${manifest.id}: tool ${def.name} conflicts with core or another pack, skipped`);
           return;
         }
         tools.push({ packId: manifest.id, def, handler, default: !!o?.default });
@@ -305,8 +308,7 @@ export class PackHost {
   }
 
   private reservedToolNames(): Set<string> {
-    // 核心工具名由 mcp/tools.ts 注入，这里由宿主侧记录避免冲突
-    return new Set((this.opts as any).reservedTools || []);
+    return new Set(this.opts.reservedTools || []);
   }
 
   private ctxFor(packId: string): PackContext {

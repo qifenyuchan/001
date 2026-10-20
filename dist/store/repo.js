@@ -382,7 +382,7 @@ export class RepoStore {
         return rec;
     }
     withSessionLock(st, fn) {
-        return withLock(this.lockDir, st.key, fn);
+        return withLock(this.lockDir, st.key, fn, this.opts.lockTimeoutMs ?? 3000);
     }
     upsertTurn(input) {
         this.maybeRefresh();

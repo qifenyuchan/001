@@ -68,6 +68,8 @@ export interface RepoOptions {
   deviceId?: string;
   spaceId?: string;
   defaultProfile?: string;
+  /** 会话锁等待上限（毫秒）；超时抛 LOCK_TIMEOUT。默认 3000 */
+  lockTimeoutMs?: number;
 }
 
 interface SessionState {
@@ -437,7 +439,7 @@ export class RepoStore {
   }
 
   private withSessionLock<T>(st: SessionState, fn: () => T): T {
-    return withLock(this.lockDir, st.key, fn);
+    return withLock(this.lockDir, st.key, fn, this.opts.lockTimeoutMs ?? 3000);
   }
 
   upsertTurn(input: SaveInput): SaveResult {

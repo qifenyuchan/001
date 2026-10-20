@@ -56,7 +56,7 @@ function req(port, method, p, { body, headers = {} } = {}) {
           } catch {
             /* 非 JSON */
           }
-          resolve({ status: res.statusCode, body: json, raw: data });
+          resolve({ status: res.statusCode, body: json, raw: data, headers: res.headers });
         });
       }
     );
@@ -154,5 +154,18 @@ test("未知路径 404；GET 写接口不生效", async () => {
     const getDelete = await req(port, "GET", "/api/delete");
     assert.equal(getDelete.status, 404);
     assert.ok(repo.get(id), "GET 不能删东西");
+  });
+});
+
+test("静态资源 no-store + nosniff：升级后不会拿到旧 app.js", async () => {
+  await withServer(async ({ port }) => {
+    for (const p of ["/", "/app.js", "/styles.css"]) {
+      const r = await req(port, "GET", p);
+      assert.equal(r.status, 200, `${p} 应可访问`);
+      assert.equal(r.headers["cache-control"], "no-store", `${p} 必须禁用缓存`);
+    }
+    const js = await req(port, "GET", "/app.js");
+    assert.equal(js.headers["x-content-type-options"], "nosniff");
+    assert.match(String(js.headers["content-type"]), /javascript/);
   });
 });

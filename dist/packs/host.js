@@ -118,7 +118,8 @@ export class PackHost {
             dirs = fs
                 .readdirSync(this.opts.packsDir, { withFileTypes: true })
                 .filter(e => e.isDirectory())
-                .map(e => path.join(this.opts.packsDir, e.name));
+                .map(e => path.join(this.opts.packsDir, e.name))
+                .sort((a, b) => a.localeCompare(b));
         }
         catch (e) {
             this.log.warn(`cannot read packs dir: ${e && e.message}`);
@@ -196,8 +197,8 @@ export class PackHost {
             registerTool: (def, handler, o) => {
                 if (!def || typeof def.name !== "string" || !def.name)
                     throw new Error("invalid tool def");
-                if (reserved.has(def.name) || tools.some(t => t.def.name === def.name)) {
-                    this.log.warn(`${manifest.id}: tool ${def.name} conflicts, skipped`);
+                if (reserved.has(def.name) || tools.some(t => t.def.name === def.name) || this.hasTool(def.name)) {
+                    this.log.warn(`${manifest.id}: tool ${def.name} conflicts with core or another pack, skipped`);
                     return;
                 }
                 tools.push({ packId: manifest.id, def, handler, default: !!o?.default });
@@ -266,7 +267,6 @@ export class PackHost {
         this.log.info(`loaded ${manifest.id}@${manifest.version} (tools=${tools.length} cli=${cli.length})`);
     }
     reservedToolNames() {
-        // 核心工具名由 mcp/tools.ts 注入，这里由宿主侧记录避免冲突
         return new Set(this.opts.reservedTools || []);
     }
     ctxFor(packId) {
