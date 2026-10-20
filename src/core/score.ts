@@ -27,7 +27,13 @@ export interface ScoreCorpus {
   n: number;
   df: Map<string, number>;
   avg: Record<string, number>;
+  /** 打分基准时间 */
+  now: number;
+  /** 新鲜度半衰期（天）；0 = 不衰减 */
+  halfLifeDays: number;
 }
+
+const DAY = 86400000;
 
 /** 一条得分的构成：哪个词、落在哪个字段、权重多少、贡献几分 */
 export interface ExplainPart {
@@ -63,7 +69,7 @@ export function docTexts(rec: MemoryRecord, profile: Profile): DocTexts {
   };
 }
 
-export function buildCorpus(docs: DocTexts[], terms: string[]): ScoreCorpus {
+export function buildCorpus(docs: DocTexts[], terms: string[], opts: { now?: number; halfLifeDays?: number } = {}): ScoreCorpus {
   const df = new Map<string, number>();
   const sum: Record<string, number> = {};
   for (const d of docs) {
@@ -87,7 +93,7 @@ export function buildCorpus(docs: DocTexts[], terms: string[]): ScoreCorpus {
   const n = docs.length || 1;
   const avg: Record<string, number> = {};
   for (const [k, v] of Object.entries(sum)) avg[k] = Math.max(1, v / n);
-  return { n: docs.length, df, avg };
+  return { n: docs.length, df, avg, now: opts.now ?? Date.now(), halfLifeDays: Math.max(0, Number(opts.halfLifeDays ?? 0)) };
 }
 
 function idf(term: string, c: ScoreCorpus): number {
@@ -128,6 +134,11 @@ export function scoreDoc(d: DocTexts, terms: string[], corpus: ScoreCorpus, out?
   score += (d.rec.rating || 3) * 0.15;
   // 邻近加成只看摘要字段（比拼全部字段便宜，且更贴近「这句话在讲什么」）
   score += proxBonus(d.fields[d.profile.excerpt_field] || d.title, terms);
+  // 新鲜度衰减：越久越轻，但不归零（1/(1+age/halfLife)）
+  if (corpus.halfLifeDays > 0 && score > 0) {
+    const ageDays = Math.max(0, (corpus.now - d.rec.created_at) / DAY);
+    score *= 1 / (1 + ageDays / corpus.halfLifeDays);
+  }
   if (d.rec.kind === "range") score *= 0.7;
   return score;
 }

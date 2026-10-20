@@ -8,6 +8,7 @@ import { deriveTitleFromFields } from "../core/title.js";
 import { safeSlice } from "../core/text.js";
 import { sanitizeKey } from "../core/util.js";
 import type { PackHost } from "../packs/host.js";
+import { parseTimeWindow } from "./time.js";
 
 export interface SearchHit {
   id: string;
@@ -26,7 +27,15 @@ export interface SearchHit {
 export function searchRecords(
   repo: RepoStore,
   query: string,
-  opts: { limit?: number; session_key?: string; explain?: boolean } = {},
+  opts: {
+    limit?: number;
+    session_key?: string;
+    explain?: boolean;
+    /** 新鲜度半衰期（天），0 = 关闭（默认关闭：实测会拉低 MRR） */
+    decayHalfLifeDays?: number;
+    /** 打分基准时间（测试可注入） */
+    now?: number;
+  } = {},
   host?: PackHost
 ): { ok: boolean; total: number; results: SearchHit[] } {
   const terms = tokenize(query);
@@ -39,12 +48,21 @@ export function searchRecords(
   }
   // 一次展开 + 一次统计：IDF 与平均长度需要全语料视角，逐条独立打分算不出来
   const docs = records.map(rec => docTexts(rec, repo.profileOf(rec.profile)));
-  const corpus = buildCorpus(docs, terms);
+  const now = opts.now ?? Date.now();
+  const halfLifeDays = Math.max(0, Number(opts.decayHalfLifeDays ?? 0));
+  const corpus = buildCorpus(docs, terms, { now, halfLifeDays });
+  // 查询里明确写了时间（上周/最近三天…）→ 落在窗口内的记录加权，但不排除窗口外
+  const window = parseTimeWindow(query, now);
+  const WINDOW_BONUS = 8;
   const scored: { rec: MemoryRecord; score: number; parts?: ExplainPart[] }[] = [];
   for (const d of docs) {
     const parts: ExplainPart[] | undefined = opts.explain ? [] : undefined;
     let s = scoreDoc(d, terms, corpus, parts);
     // 包的 score hook 只在原本命中时调整排序，不负责「从无到有」捞记录
+    if (s > 0 && window && d.rec.created_at >= window.from && d.rec.created_at < window.to) {
+      s += WINDOW_BONUS;
+      if (parts) parts.push({ term: "*", field: window.label, weight: 0, tf: 0, contribution: WINDOW_BONUS });
+    }
     if (s > 0 && host) {
       const delta = host.score(d.rec, { query, terms });
       if (delta) {

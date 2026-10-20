@@ -62,7 +62,7 @@ if (!config.noPacks) {
         packsDir: config.packsDir,
         dataDir: config.dataDir,
         repo,
-        coreVersion: "2.12.0",
+        coreVersion: "2.13.0",
         reservedTools: TOOL_DEFS.map(t => t.name),
         log: {
             info: () => { },
@@ -132,7 +132,7 @@ try {
         }
         case "search": {
             const q = pos.join(" ") || (typeof flags.q === "string" ? flags.q : "");
-            out(searchRecords(repo, q, { limit: flags.limit ? Number(flags.limit) : 10, session_key: typeof flags.session === "string" ? flags.session : undefined, explain: !!flags.explain }, host));
+            out(searchRecords(repo, q, { limit: flags.limit ? Number(flags.limit) : 10, session_key: typeof flags.session === "string" ? flags.session : undefined, explain: !!flags.explain, decayHalfLifeDays: config.decayHalfLifeDays }, host));
             break;
         }
         case "list": {

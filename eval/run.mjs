@@ -24,6 +24,8 @@ const minMrrArg = argv.indexOf("--min-mrr");
 const minMrr = minMrrArg >= 0 ? Number(argv[minMrrArg + 1]) : null;
 const catArg = argv.indexOf("--cat");
 const onlyCat = catArg >= 0 ? argv[catArg + 1] : null;
+const decayArg = argv.indexOf("--decay");
+const decay = decayArg >= 0 ? Number(argv[decayArg + 1]) : 0;
 const K = 5;
 
 const CAT_LABEL = {
@@ -42,7 +44,8 @@ repo.open();
 const idOf = new Map();
 for (const s of suite.sessions) {
   for (const t of s.turns) {
-    const r = repo.upsertTurn({ session_id: s.key, turn_no: t.turn, fields: t.fields });
+    const created_at = t.age_days != null ? Date.now() - Number(t.age_days) * 86400000 : undefined;
+    const r = repo.upsertTurn({ session_id: s.key, turn_no: t.turn, fields: t.fields, created_at });
     idOf.set(`${s.key}#${t.turn}`, r.id);
   }
 }
@@ -53,7 +56,7 @@ for (const c of suite.queries) {
   const cat = c.cat || "keyword";
   if (onlyCat && cat !== onlyCat) continue;
   const t0 = performance.now();
-  const res = searchRecords(repo, c.q, { limit: K });
+  const res = searchRecords(repo, c.q, { limit: K, decayHalfLifeDays: decay });
   lat.push(performance.now() - t0);
   const got = res.results.map(r => r.id);
   const expect = c.expect.map(k => idOf.get(k)).filter(Boolean);
@@ -121,6 +124,7 @@ if (asJson) {
   process.stdout.write("─".repeat(64) + "\n");
   process.stdout.write(`用例 ${n}　记录 ${summary.records}　K=${K}\n`);
   process.stdout.write(`Hit@5 ${summary.hit_at_5.toFixed(3)}　Recall@5 ${summary.recall_at_5.toFixed(3)}　MRR@5 ${summary.mrr_at_5.toFixed(3)}\n`);
+  process.stdout.write(`衰减   半衰期 ${decay === 0 ? "关闭" : decay + " 天"}\n`);
   process.stdout.write(`延迟   p50 ${summary.latency_ms.p50}ms　p95 ${summary.latency_ms.p95}ms\n`);
   process.stdout.write(`注入   最长 ${maxBlock} 字符　${summary.budget_ok ? "OK" : `超预算 ${budget}`}\n`);
 

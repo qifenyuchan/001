@@ -201,6 +201,15 @@ export function buildTurn(input, opts, existing) {
     const ratingRaw = Number(input.rating);
     const rating = isFinite(ratingRaw) ? Math.max(1, Math.min(5, Math.floor(ratingRaw))) : 3;
     const now = opts.nowMs;
+    // 指定时间只允许「过去」（导入/迁移）；超出未来一天视为调用方出错
+    let createdAt = now;
+    if (!existing && input.created_at !== undefined && input.created_at !== null) {
+        const v = Number(input.created_at);
+        if (!Number.isSafeInteger(v) || v <= 0 || v > now + 86400000) {
+            throw new NorthstarError("INVALID_ARG", `created_at must be a past timestamp, got ${input.created_at}`);
+        }
+        createdAt = v;
+    }
     const rawTurn = input.turn_no;
     const turnProvided = rawTurn !== undefined && rawTurn !== null && String(rawTurn).trim() !== "";
     const turnNo = existing ? existing.turn_no : turnProvided ? Math.floor(Number(rawTurn)) : NaN;
@@ -224,7 +233,7 @@ export function buildTurn(input, opts, existing) {
         session_id: sessionId,
         session_key: sessionKey,
         turn_no: turnNo,
-        created_at: existing ? existing.created_at : now,
+        created_at: existing ? existing.created_at : createdAt,
         updated_at: now,
         revision: existing ? existing.revision + 1 : 1,
         updated_by: opts.deviceId,

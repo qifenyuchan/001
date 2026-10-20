@@ -112,6 +112,8 @@ export interface SaveInput {
   tags?: string[];
   rating?: number;
   source?: string;
+  /** 记录时间（毫秒）。用于导入、迁移与评测；不传则取当前时间 */
+  created_at?: number;
 }
 
 export interface SaveResult {

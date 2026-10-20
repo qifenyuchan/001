@@ -1,6 +1,6 @@
 {
   "name": "northstar-memory",
-  "version": "2.12.0",
+  "version": "2.13.0",
   "description": "Host-agnostic long-term memory for AI agents: per-turn summaries, previous-turn injection, editable repository.",
   "type": "module",
   "bin": {
@@ -13,7 +13,7 @@
     "build": "tsc -p tsconfig.json",
     "start": "node dist/server.js --data ./data",
     "ui": "node dist/server.js --ui-only --data ./data",
-    "test": "node --test tests/schema.test.mjs tests/store.test.mjs tests/recall.test.mjs tests/range.test.mjs tests/search.test.mjs tests/mcp.test.mjs tests/ui.test.mjs tests/sync.test.mjs tests/migrate.test.mjs tests/migrate-edge.test.mjs tests/ui-write.test.mjs tests/auth.test.mjs tests/security.test.mjs tests/profiles.test.mjs tests/packs.test.mjs tests/creative.test.mjs tests/invariants.test.mjs tests/safety.test.mjs tests/undo.test.mjs tests/multi.test.mjs tests/edge.test.mjs tests/pack-edge.test.mjs tests/lock.test.mjs tests/http.test.mjs tests/cli.test.mjs",
+    "test": "node --test tests/schema.test.mjs tests/store.test.mjs tests/recall.test.mjs tests/range.test.mjs tests/search.test.mjs tests/time.test.mjs tests/mcp.test.mjs tests/ui.test.mjs tests/sync.test.mjs tests/migrate.test.mjs tests/migrate-edge.test.mjs tests/ui-write.test.mjs tests/auth.test.mjs tests/security.test.mjs tests/profiles.test.mjs tests/packs.test.mjs tests/creative.test.mjs tests/invariants.test.mjs tests/safety.test.mjs tests/undo.test.mjs tests/multi.test.mjs tests/edge.test.mjs tests/pack-edge.test.mjs tests/lock.test.mjs tests/http.test.mjs tests/cli.test.mjs",
     "migrate": "node dist/migrate.js",
     "eval": "node eval/run.mjs",
     "smoke": "node scripts/smoke.mjs",

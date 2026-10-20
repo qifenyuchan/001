@@ -10,6 +10,7 @@ const B = 0.75; // 长度归一强度
 // 实测（eval v2，58 记录 / 83 查询）：去掉标题计分后 keyword MRR 0.901→0.966。
 const TAG_W = 3;
 const RAW_W = 1;
+const DAY = 86400000;
 function countOcc(hay, needle) {
     if (!hay || !needle)
         return 0;
@@ -35,7 +36,7 @@ export function docTexts(rec, profile) {
         fields,
     };
 }
-export function buildCorpus(docs, terms) {
+export function buildCorpus(docs, terms, opts = {}) {
     const df = new Map();
     const sum = {};
     for (const d of docs) {
@@ -61,7 +62,7 @@ export function buildCorpus(docs, terms) {
     const avg = {};
     for (const [k, v] of Object.entries(sum))
         avg[k] = Math.max(1, v / n);
-    return { n: docs.length, df, avg };
+    return { n: docs.length, df, avg, now: opts.now ?? Date.now(), halfLifeDays: Math.max(0, Number(opts.halfLifeDays ?? 0)) };
 }
 function idf(term, c) {
     const df = c.df.get(term) || 0;
@@ -107,6 +108,11 @@ export function scoreDoc(d, terms, corpus, out) {
     score += (d.rec.rating || 3) * 0.15;
     // 邻近加成只看摘要字段（比拼全部字段便宜，且更贴近「这句话在讲什么」）
     score += proxBonus(d.fields[d.profile.excerpt_field] || d.title, terms);
+    // 新鲜度衰减：越久越轻，但不归零（1/(1+age/halfLife)）
+    if (corpus.halfLifeDays > 0 && score > 0) {
+        const ageDays = Math.max(0, (corpus.now - d.rec.created_at) / DAY);
+        score *= 1 / (1 + ageDays / corpus.halfLifeDays);
+    }
     if (d.rec.kind === "range")
         score *= 0.7;
     return score;

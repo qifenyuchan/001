@@ -258,6 +258,7 @@ export function createTools(repo: RepoStore, config: Config, host?: PackHost) {
         limit: args.limit,
         session_key: args.session_id ? String(args.session_id) : undefined,
         explain: !!args.explain,
+        decayHalfLifeDays: config.decayHalfLifeDays,
       },
       host
     );

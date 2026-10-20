@@ -22,6 +22,8 @@ export function loadConfig(cli = {}) {
     const toolsMode = (cli.toolsMode || process.env.TM_TOOLS_MODE || fileCfg.tools_mode || "lite") === "full" ? "full" : "lite";
     const rangeEvery = Math.max(2, Number(cli.rangeEvery ?? process.env.TM_RANGE_EVERY ?? fileCfg.range_every ?? 10));
     const recallMaxChars = Math.max(200, Number(cli.recallMaxChars ?? fileCfg.recall_max_chars ?? 1200));
+    // 新鲜度衰减：默认关闭（实测在合成集上拉低 MRR），需要时用配置开启
+    const decayHalfLifeDays = Math.max(0, Number(cli.decayHalfLifeDays ?? process.env.TM_DECAY_HALF_LIFE_DAYS ?? fileCfg.decay_half_life_days ?? 0));
     const rawHead = Math.max(200, Number(fileCfg.raw_head ?? 1200));
     const rawTail = Math.max(0, Number(fileCfg.raw_tail ?? 600));
     const packsRaw = cli.packsDir || process.env.TM_PACKS_DIR || fileCfg.packs_dir || path.join(os.homedir(), ".northstar", "packs");
@@ -40,6 +42,7 @@ export function loadConfig(cli = {}) {
         uiOnly: !!cli.uiOnly,
         rangeEvery,
         recallMaxChars,
+        decayHalfLifeDays,
         rawHead,
         rawTail,
         logFile: path.join(dataDir, "logs", "server.log"),

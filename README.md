@@ -201,6 +201,7 @@ node dist/server.js --data ./data --http-host 0.0.0.0 --http-port 8788 --token <
 | `recall_max_chars` | `1200` | 注入块预算 |
 | `raw_head` / `raw_tail` | `1200` / `600` | 原文头尾窗口 |
 | `packs_dir` | `~/.northstar/packs` | 升级包安装目录（代码，不进数据目录） |
+| `decay_half_life_days` | `0`（关闭） | 新鲜度衰减半衰期；实测默认关闭更好，需要时再开 |
 
 环境变量：`TM_DATA_DIR`、`TM_UI_PORT`、`TM_UI_HOST`、`TM_HTTP_PORT`、`TM_HTTP_HOST`、`TM_AUTH_TOKEN`、`TM_RANGE_EVERY`、`TM_TOOLS_MODE`（lite/full）、`TM_PACKS_DIR`、`TM_DEVICE_ID`。
 
@@ -248,7 +249,7 @@ node dist/migrate.js --apply   --from "<旧>/pc_host/data" --data ./data --repor
 ## 测试
 
 ```bash
-npm test        # 25 套件 174 断言：schema/store/recall/range/search/mcp/ui/ui-write/sync/migrate/migrate-edge/auth/security/profiles/packs/pack-edge/creative/invariants/safety/undo/multi/edge/http/cli
+npm test        # 26 套件 181 断言：schema/store/recall/range/search/time/mcp/ui/ui-write/sync/migrate/migrate-edge/auth/security/profiles/packs/pack-edge/creative/invariants/safety/undo/multi/edge/http/cli
 npm run test:unit  # 同上，去掉 CLI/HTTP/多实例（快循环，约 25s）
 npm run eval    # 检索质量基线：分类别 Hit@5 / MRR@5 / 延迟 / 注入有界性（CI 门禁 --min-hit 0.92 --min-mrr 0.86）
 npm run smoke   # 发布冒烟：打包 → 装进干净目录 → 当真实用户跑一遍（CI 上也跑）
