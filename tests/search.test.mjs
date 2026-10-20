@@ -64,6 +64,22 @@ test("长度归一：命中相同时，短精准记录胜过长废话（旧公�
   assert.ok(r.results[0].score > r.results[1].score, "两者分数应有区分，而不是并列");
 });
 
+test("explain：返回命中构成，默认不返回", () => {
+  const repo = tmpRepo();
+  repo.upsertTurn({ session_id: "s1", turn_no: 1, fields: { ...base, 事情: "部署失败因为权限不足" } });
+  const plain = searchRecords(repo, "部署权限");
+  assert.equal(plain.results[0].why, undefined, "默认不带 why（省 token）");
+
+  const ex = searchRecords(repo, "部署权限", { explain: true });
+  const why = ex.results[0].why;
+  assert.ok(Array.isArray(why) && why.length > 0);
+  assert.ok(why.some(w => w.t === "部署" && w.f === "事情"), why.map(w => `${w.f}:${w.t}`).join(","));
+  assert.ok(why.every(w => typeof w.c === "number" && w.c >= 0));
+  // 按贡献降序，且最多 4 条
+  assert.ok(why.length <= 4);
+  for (let i = 1; i < why.length; i++) assert.ok(why[i - 1].c >= why[i].c);
+});
+
 test("IDF：稀有词命中优先于常见词命中", () => {
   const repo = tmpRepo();
   // 8 条都提「会议」（常见词，df=8）

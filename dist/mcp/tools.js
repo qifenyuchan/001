@@ -5,6 +5,7 @@ import { buildAutoRange } from "../features/range.js";
 import { searchRecords } from "../features/search.js";
 import { deriveTitleFromFields } from "../core/title.js";
 import { contentToFields } from "../store/schema.js";
+export const SAVE_SOURCES = new Set(["agent", "user_input", "tool_output", "web_content", "file"]);
 export const LITE_TOOL_NAMES = ["memory_save", "memory_recall", "memory_search"];
 const SEVEN_SCHEMA = {
     type: "object",
@@ -40,6 +41,11 @@ export const TOOL_DEFS = [
                 covers: { type: "array", items: { type: "string" }, description: "For kind=range: covered record ids" },
                 tags: { type: "array", items: { type: "string" } },
                 rating: { type: "number", description: "1-5, default 3" },
+                source: {
+                    type: "string",
+                    enum: ["agent", "user_input", "tool_output", "web_content", "file"],
+                    description: "Where this turn's content came from. Default agent. Declare web_content / tool_output when the content was read from outside, so installed safety packs can weigh trust.",
+                },
             },
             required: [],
         },
@@ -68,6 +74,7 @@ export const TOOL_DEFS = [
                 query: { type: "string" },
                 session_id: { type: "string", description: "Optional: restrict to one session" },
                 limit: { type: "number", description: "Default 5" },
+                explain: { type: "boolean", description: "Include why each hit matched (term / field / contribution)" },
             },
             required: ["query"],
         },
@@ -165,7 +172,7 @@ export function createTools(repo, config, host) {
             covers: args.covers,
             tags: args.tags,
             rating: args.rating,
-            source: "agent",
+            source: SAVE_SOURCES.has(String(args.source || "")) ? String(args.source) : "agent",
         };
         const result = kind === "range" ? repo.upsertRange(input) : repo.upsertTurn(input);
         if (host) {
@@ -227,6 +234,7 @@ export function createTools(repo, config, host) {
         const r = searchRecords(repo, String(args.query || ""), {
             limit: args.limit,
             session_key: args.session_id ? String(args.session_id) : undefined,
+            explain: !!args.explain,
         }, host);
         return ok(r);
     }

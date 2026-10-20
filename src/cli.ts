@@ -64,7 +64,7 @@ if (!config.noPacks) {
     packsDir: config.packsDir,
     dataDir: config.dataDir,
     repo,
-    coreVersion: "2.8.1",
+    coreVersion: "2.9.0",
     log: {
       info: () => {},
       warn: (s: string) => process.stderr.write(`[pack] WARN ${s}\n`),
@@ -129,7 +129,7 @@ try {
     }
     case "search": {
       const q = pos.join(" ") || (typeof flags.q === "string" ? flags.q : "");
-      out(searchRecords(repo, q, { limit: flags.limit ? Number(flags.limit) : 10, session_key: typeof flags.session === "string" ? flags.session : undefined }, host));
+      out(searchRecords(repo, q, { limit: flags.limit ? Number(flags.limit) : 10, session_key: typeof flags.session === "string" ? flags.session : undefined, explain: !!flags.explain }, host));
       break;
     }
     case "list": {

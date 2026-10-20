@@ -19,23 +19,40 @@ export function searchRecords(repo, query, opts = {}, host) {
     const corpus = buildCorpus(docs, terms);
     const scored = [];
     for (const d of docs) {
-        let s = scoreDoc(d, terms, corpus);
+        const parts = opts.explain ? [] : undefined;
+        let s = scoreDoc(d, terms, corpus, parts);
         // 包的 score hook 只在原本命中时调整排序，不负责「从无到有」捞记录
-        if (s > 0 && host)
-            s += host.score(d.rec, { query, terms });
+        if (s > 0 && host) {
+            const delta = host.score(d.rec, { query, terms });
+            if (delta) {
+                s += delta;
+                if (parts)
+                    parts.push({ term: "*", field: "扩展", weight: 0, tf: 0, contribution: Math.round(delta * 100) / 100 });
+            }
+        }
         if (s > 0)
-            scored.push({ rec: d.rec, score: s });
+            scored.push({ rec: d.rec, score: s, parts });
     }
     scored.sort((a, b) => b.score - a.score || b.rec.created_at - a.rec.created_at);
-    const results = scored.slice(0, limit).map(({ rec, score }) => ({
+    const results = scored.slice(0, limit).map(({ rec, score, parts }) => ({
         id: rec.id,
         kind: rec.kind,
         session_key: rec.session_key,
+        session_id: rec.session_id,
         turn_no: rec.turn_no,
         created_at: rec.created_at,
         title: deriveTitleFromFields(rec.fields, rec.raw_text, repo.profileOf(rec.profile)),
         excerpt: safeSlice(`${rec.fields[repo.profileOf(rec.profile).excerpt_field] || ""}`.trim(), 120),
         score: Math.round(score * 100) / 100,
+        ...(parts
+            ? {
+                why: parts
+                    .slice()
+                    .sort((a, b) => b.contribution - a.contribution)
+                    .slice(0, 4)
+                    .map(p => ({ f: p.field, t: p.term, c: p.contribution })),
+            }
+            : {}),
     }));
     return { ok: true, total: scored.length, results };
 }

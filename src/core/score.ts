@@ -28,6 +28,15 @@ export interface ScoreCorpus {
   avg: Record<string, number>;
 }
 
+/** 一条得分的构成：哪个词、落在哪个字段、权重多少、贡献几分 */
+export interface ExplainPart {
+  term: string;
+  field: string;
+  weight: number;
+  tf: number;
+  contribution: number;
+}
+
 function countOcc(hay: string, needle: string): number {
   if (!hay || !needle) return 0;
   let n = 0;
@@ -94,18 +103,23 @@ function termIn(term: string, text: string, avgLen: number, weight: number, c: S
   return weight * idf(term, c) * sat;
 }
 
-export function scoreDoc(d: DocTexts, terms: string[], corpus: ScoreCorpus): number {
+export function scoreDoc(d: DocTexts, terms: string[], corpus: ScoreCorpus, out?: ExplainPart[]): number {
   if (!terms.length) return 0;
   let score = 0;
   let matched = 0;
+  const label = (key: string) => d.profile.fields.find(f => f.key === key)?.label || key;
   for (const t of terms) {
     let hit = 0;
-    hit += termIn(t, d.title, corpus.avg.__title || 1, TITLE_W, corpus);
-    hit += termIn(t, d.tags, corpus.avg.__tags || 1, TAG_W, corpus);
-    for (const f of d.profile.fields) {
-      hit += termIn(t, d.fields[f.key] || "", corpus.avg[f.key] || 1, f.weight, corpus);
-    }
-    hit += termIn(t, d.raw, corpus.avg.__raw || 1, RAW_W, corpus);
+    const bump = (field: string, weight: number, text: string, avgLen: number) => {
+      const c = termIn(t, text, avgLen, weight, corpus);
+      if (!c) return;
+      hit += c;
+      if (out) out.push({ term: t, field, weight, tf: countOcc(text, t), contribution: Math.round(c * 100) / 100 });
+    };
+    bump("标题", TITLE_W, d.title, corpus.avg.__title || 1);
+    bump("标签", TAG_W, d.tags, corpus.avg.__tags || 1);
+    for (const f of d.profile.fields) bump(label(f.key), f.weight, d.fields[f.key] || "", corpus.avg[f.key] || 1);
+    bump("原文", RAW_W, d.raw, corpus.avg.__raw || 1);
     if (hit > 0) matched++;
     score += hit;
   }

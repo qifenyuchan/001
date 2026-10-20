@@ -1,0 +1,12 @@
+{
+  "id": "safety",
+  "name": "安全合规包",
+  "version": "1.0.0",
+  "apiVersion": "^1",
+  "requires": { "core": ">=2.8.0" },
+  "provides": {
+    "cli": ["safety"],
+    "hooks": ["onSave", "score", "compose"]
+  },
+  "description": "记忆投毒防线：写入时标记可疑内容、低信任来源降权、上一轮可疑时提示。只标记，不拒绝写入。"
+}

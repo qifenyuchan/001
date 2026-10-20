@@ -5,7 +5,7 @@
 
 ## 0.1 实现状态（2.7.0）
 
-已落地：`src/packs/{types,host}.ts`、CLI `pack` 七个命令、四个 hook 接入（compose 在注入、score 在检索、onSave 在保存/删除、export 在导出）、工具集按包合并、两个包（`export-obsidian` / `creative`）、17 项包相关回归测试。
+已落地：`src/packs/{types,host}.ts`、CLI `pack` 七个命令、四个 hook 接入（compose 在注入、score 在检索、onSave 在保存/删除、export 在导出）、工具集按包合并、三个包（`export-obsidian` / `creative` / `safety`）、24 项包相关回归测试。
 
 与设计稿的三处偏差（以实现为准）：
 
@@ -193,7 +193,7 @@ try {
 | B 会话交接 | `handoff` | `adr` 方案、`memory_handoff`、`handoff` 命令 | compose（交接摘要） | 无 |
 | C 生命周期 | `lifecycle` | `memory_consolidate`、时间字段方案 | score（ACT-R 衰减） | 需 `superseded_by` 进 profile |
 | D 检索索引 | `recall-index` | 无工具（透明加速） | onSave（维护倒排）、score（索引命中加权） | 无 |
-| E 安全合规 | `safety` | `memory_flag` | onSave（来源/注入检测）、score（信任权重） | 无 |
+| E 安全合规 | `safety` ✅ 已实现 | `safety` CLI（scan/flag/list） | onSave（注入检测）、score（信任权重）、compose（上一轮可疑提示） | 无（新增 `memory_save.source` 声明来源） |
 | F 导出互通 | `export-obsidian` | `northstar export --format obsidian` | export | 无 |
 
 只有 C 需要核心配合（把时间字段变成可声明的），其余五个都能纯 hook 实现——**说明扩展点设计得够用**。
