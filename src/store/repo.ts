@@ -876,8 +876,29 @@ export class RepoStore {
     };
   }
 
-  trashList(): TrashItem[] {
-    const out: TrashItem[] = [];
+  /** 一条记录的历史版本（编辑快照 + 删除墓碑），按时间倒序 */
+  historyOf(id: string): TrashItem[] {
+    this.maybeRefresh();
+    const want = String(id || "");
+    return this.trashList()
+      .filter(t => t.record && t.record.id === want)
+      .sort((a, b) => b.deleted_at - a.deleted_at);
+  }
+
+  /** 回滚到上一个（或第 N 个）历史版本；当前版本会先被快照，所以回滚本身也能回滚 */
+  undo(id: string, steps = 1): { record: MemoryRecord; from: TrashItem } {
+    const hist = this.historyOf(id);
+    const n = Math.max(1, Math.floor(Number(steps) || 1));
+    if (!hist.length) throw new NorthstarError("NOT_FOUND", `no history for record: ${id}（该记录从未被编辑或删除过）`);
+    if (n > hist.length) {
+      throw new NorthstarError("NOT_FOUND", `only ${hist.length} historical version(s) available, requested ${n}`);
+    }
+    const target = hist[n - 1];
+    const record = this.restore(target.trash_id);
+    return { record, from: target };
+  }
+
+  trashList(): TrashItem[] {    const out: TrashItem[] = [];
     for (const f of listFiles(this.tombDir)) {
       const r = readJson<Tombstone>(path.join(this.tombDir, f));
       if (!r.ok || !r.value || !r.value.record) continue;

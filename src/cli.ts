@@ -64,7 +64,7 @@ if (!config.noPacks) {
     packsDir: config.packsDir,
     dataDir: config.dataDir,
     repo,
-    coreVersion: "2.9.0",
+    coreVersion: "2.10.0",
     log: {
       info: () => {},
       warn: (s: string) => process.stderr.write(`[pack] WARN ${s}\n`),
@@ -218,6 +218,38 @@ try {
       out(buildAutoRange(repo, session, from, to));
       break;
     }
+    case "versions": {
+      const id = String(pos[0] || flags.id || "").trim();
+      if (!id) throw new NorthstarError("INVALID_ARG", "usage: versions <record_id>");
+      const hist = repo.historyOf(id);
+      out({
+        ok: true,
+        id,
+        count: hist.length,
+        versions: hist.map(t => ({
+          trash_id: t.trash_id,
+          at: t.deleted_at,
+          reason: t.reason,
+          revision: t.record.revision,
+          preview: String(t.record.fields["事情"] || t.record.fields["事件"] || t.record.raw_text || "").slice(0, 40),
+        })),
+      });
+      break;
+    }
+    case "undo": {
+      const id = String(pos[0] || flags.id || "").trim();
+      if (!id) throw new NorthstarError("INVALID_ARG", "usage: undo <record_id> [--steps N]");
+      const steps = Number(flags.steps || 1);
+      const r = repo.undo(id, steps);
+      out({
+        ok: true,
+        id: r.record.id,
+        revision: r.record.revision,
+        restored_from: { trash_id: r.from.trash_id, at: r.from.deleted_at, revision: r.from.record.revision },
+        note: "当前版本已进 .trash——再执行一次 undo 会回到刚才的状态",
+      });
+      break;
+    }
     case "pack": {
       const sub = pos[0] || "list";
       const id = String(pos[1] || flags.id || "").trim();
@@ -277,6 +309,8 @@ try {
           "  node dist/cli.js list [--session id] [--kind turn|range] [--page N] [--page-size 20]",
           "  node dist/cli.js get <id>",
           "  node dist/cli.js sessions [--all]",
+          "  node dist/cli.js versions <record_id>",
+          "  node dist/cli.js undo <record_id> [--steps N]",
           "  node dist/cli.js profile [list|use <id>|install custom|path|remove <id>]",
           "  node dist/cli.js pack [list|install <dir>|enable <id>|disable <id>|remove <id>|doctor|rebuild <id>]",
           "  node dist/cli.js sync [status|doctor]",

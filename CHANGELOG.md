@@ -1,5 +1,17 @@
 # Changelog
 
+## 2.10.0 — 2026-10-20
+
+- **Q8 版本回滚**：`versions <id>` 列出历史版本（编辑快照 + 删除墓碑），
+  `undo <id> [--steps N]` 回退；回退本身也会被快照，所以能再回退回去
+- **Q9 导出**：`export --out`（全量 JSON）+ 包 `export-obsidian`（Markdown vault）
+- **Q10 损坏隔离**：由不变量测试 6 覆盖（坏记录 / 坏包都只降级）
+- **新增发布冒烟 `npm run smoke`**：打包 → 装进干净目录 → 当真实用户跑 11 项
+  （save / search --explain / 装两个包 / 切换方案 / 触发注入 / obsidian 导出 /
+  versions+undo / stats）。CI 上在 Node 22 跑一次
+- 测试 108 → 114
+
+
 ## 2.9.0 — 2026-10-20
 
 - **Q3 召回理由**：`memory_search` 增 `explain`；CLI `search --explain`
