@@ -6,7 +6,8 @@ import { asText } from "./text.js";
 import { GENERAL_PROFILE } from "../store/profiles.js";
 const K1 = 1.2; // 词频饱和
 const B = 0.75; // 长度归一强度
-const TITLE_W = 3; // 标题是概要，额外加权
+// 标题由 title_field 派生，与字段正文是同一段文字——单独计分会把该字段算两遍。
+// 实测（eval v2，58 记录 / 83 查询）：去掉标题计分后 keyword MRR 0.901→0.966。
 const TAG_W = 3;
 const RAW_W = 1;
 function countOcc(hay, needle) {
@@ -51,7 +52,6 @@ export function buildCorpus(docs, terms) {
                 }
             }
         }
-        sum.__title = (sum.__title || 0) + d.title.length;
         sum.__tags = (sum.__tags || 0) + d.tags.length;
         sum.__raw = (sum.__raw || 0) + d.raw.length;
         for (const f of d.profile.fields)
@@ -91,7 +91,6 @@ export function scoreDoc(d, terms, corpus, out) {
             if (out)
                 out.push({ term: t, field, weight, tf: countOcc(text, t), contribution: Math.round(c * 100) / 100 });
         };
-        bump("标题", TITLE_W, d.title, corpus.avg.__title || 1);
         bump("标签", TAG_W, d.tags, corpus.avg.__tags || 1);
         for (const f of d.profile.fields)
             bump(label(f.key), f.weight, d.fields[f.key] || "", corpus.avg[f.key] || 1);

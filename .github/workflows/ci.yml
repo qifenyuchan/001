@@ -20,7 +20,7 @@ jobs:
       - run: npm ci
       - run: npm run build
       - run: npm test
-      - run: npm run eval -- --min-mrr 0.85
+      - run: npm run eval -- --min-hit 0.92 --min-mrr 0.86
       # 发布冒烟：打包 → 装进干净目录 → 当真实用户跑一遍（只在一个 Node 版本上跑，省 CI 时间）
       - if: matrix.node == 22 && runner.os == 'Linux'
         run: npm run smoke

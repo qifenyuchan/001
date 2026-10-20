@@ -250,7 +250,7 @@ node dist/migrate.js --apply   --from "<旧>/pc_host/data" --data ./data --repor
 ```bash
 npm test        # 25 套件 174 断言：schema/store/recall/range/search/mcp/ui/ui-write/sync/migrate/migrate-edge/auth/security/profiles/packs/pack-edge/creative/invariants/safety/undo/multi/edge/http/cli
 npm run test:unit  # 同上，去掉 CLI/HTTP/多实例（快循环，约 25s）
-npm run eval    # 检索质量基线：Hit@5 / MRR@5 / 延迟 / 注入有界性（CI 门禁 --min-mrr 0.85）
+npm run eval    # 检索质量基线：分类别 Hit@5 / MRR@5 / 延迟 / 注入有界性（CI 门禁 --min-hit 0.92 --min-mrr 0.86）
 npm run smoke   # 发布冒烟：打包 → 装进干净目录 → 当真实用户跑一遍（CI 上也跑）
 npm run build   # TypeScript 构建（仅开发需要；dist/ 已随包提供）
 ```

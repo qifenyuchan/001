@@ -35,7 +35,7 @@ export const GENERAL_PROFILE: Profile = {
   fields: [
     { key: "时间", label: "时间", weight: 1, max_chars: 40, hint: "YYYY-MM-DD 或相对时间" },
     { key: "地点", label: "地点", weight: 1, max_chars: 120, hint: "地点 / 项目 / 环境，可写“无”" },
-    { key: "人物", label: "人物", weight: 1, max_chars: 120, hint: "参与者，可写“无”" },
+    { key: "人物", label: "人物", weight: 2.5, max_chars: 120, hint: "参与者，可写“无”" },
     { key: "事情", label: "事情", weight: 3, required: true, max_chars: 300, hint: "一句话说清发生了什么" },
     { key: "原因", label: "原因", weight: 1.5, max_chars: 300, hint: "为什么会这样" },
     { key: "结果", label: "结果", weight: 2.5, required: true, max_chars: 400, hint: "可验证的产出 / 结论" },

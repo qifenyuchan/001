@@ -62,7 +62,7 @@ if (!config.noPacks) {
         packsDir: config.packsDir,
         dataDir: config.dataDir,
         repo,
-        coreVersion: "2.11.2",
+        coreVersion: "2.12.0",
         reservedTools: TOOL_DEFS.map(t => t.name),
         log: {
             info: () => { },
