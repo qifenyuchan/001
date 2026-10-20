@@ -5,7 +5,7 @@
 
 ## 0.1 实现状态（2.7.0）
 
-已落地：`src/packs/{types,host}.ts`、CLI `pack` 七个命令、四个 hook 接入（compose 在注入、score 在检索、onSave 在保存/删除、export 在导出）、工具集按包合并、首个包 `packs/export-obsidian`、11 项回归测试。
+已落地：`src/packs/{types,host}.ts`、CLI `pack` 七个命令、四个 hook 接入（compose 在注入、score 在检索、onSave 在保存/删除、export 在导出）、工具集按包合并、两个包（`export-obsidian` / `creative`）、17 项包相关回归测试。
 
 与设计稿的三处偏差（以实现为准）：
 
@@ -189,7 +189,7 @@ try {
 
 | 升级包 | pack id | 提供 | hook | 核心改动 |
 |---|---|---|---|---|
-| A 文创写作 | `creative` | `story` 字段方案、`memory_pin` | compose（触发命中）、score（pinned 加成） | 无（profile + hook 足够） |
+| A 文创写作 | `creative` ✅ 已实现 | `story` 字段方案、`memory_pin` | compose（触发命中）、score（pinned 加成）、onSave（触发索引） | 无（profile + hook 足够；仅新增窄写入端口 updateTags） |
 | B 会话交接 | `handoff` | `adr` 方案、`memory_handoff`、`handoff` 命令 | compose（交接摘要） | 无 |
 | C 生命周期 | `lifecycle` | `memory_consolidate`、时间字段方案 | score（ACT-R 衰减） | 需 `superseded_by` 进 profile |
 | D 检索索引 | `recall-index` | 无工具（透明加速） | onSave（维护倒排）、score（索引命中加权） | 无 |

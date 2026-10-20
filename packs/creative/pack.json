@@ -1,0 +1,13 @@
+{
+  "id": "creative",
+  "name": "文创写作包",
+  "version": "1.0.0",
+  "apiVersion": "^1",
+  "requires": { "core": ">=2.7.0" },
+  "provides": {
+    "profiles": ["story"],
+    "tools": ["memory_pin"],
+    "hooks": ["compose", "score", "onSave"]
+  },
+  "description": "剧情字段方案 + 触发式注入（世界书机制）+ 真相层（钉为设定，被取代需显式确认）"
+}

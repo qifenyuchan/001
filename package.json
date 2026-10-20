@@ -1,6 +1,6 @@
 {
   "name": "northstar-memory",
-  "version": "2.7.0",
+  "version": "2.8.0",
   "description": "Host-agnostic long-term memory for AI agents: per-turn summaries, previous-turn injection, editable repository.",
   "type": "module",
   "bin": {
@@ -13,8 +13,9 @@
     "build": "tsc -p tsconfig.json",
     "start": "node dist/server.js --data ./data",
     "ui": "node dist/server.js --ui-only --data ./data",
-    "test": "node --test tests/schema.test.mjs tests/store.test.mjs tests/recall.test.mjs tests/range.test.mjs tests/search.test.mjs tests/mcp.test.mjs tests/ui.test.mjs tests/sync.test.mjs tests/migrate.test.mjs tests/auth.test.mjs tests/security.test.mjs tests/profiles.test.mjs tests/packs.test.mjs",
-    "migrate": "node dist/migrate.js"
+    "test": "node --test tests/schema.test.mjs tests/store.test.mjs tests/recall.test.mjs tests/range.test.mjs tests/search.test.mjs tests/mcp.test.mjs tests/ui.test.mjs tests/sync.test.mjs tests/migrate.test.mjs tests/auth.test.mjs tests/security.test.mjs tests/profiles.test.mjs tests/packs.test.mjs tests/creative.test.mjs",
+    "migrate": "node dist/migrate.js",
+    "eval": "node eval/run.mjs"
   },
   "devDependencies": {
     "@types/node": "^22.20.5",
@@ -26,6 +27,7 @@
     "ui/",
     "docs/",
     "profiles/",
+    "eval/",
     "packs/",
     "README.md",
     "README.en.md",

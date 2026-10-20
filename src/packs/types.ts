@@ -91,6 +91,11 @@ export interface PackApi extends PackContext {
   registerTool(def: ToolDef, handler: (args: Record<string, any>) => unknown, opts?: { default?: boolean }): void;
   registerCli(name: string, help: string, run: (argv: string[]) => number | void | Promise<number | void>): void;
   hook(name: HookName, fn: (...args: any[]) => any, opts?: { priority?: number; timeoutMs?: number }): void;
+
+  /** 按 id 读一条记录（O(1) 定位；只读） */
+  getRecord(id: string): MemoryRecord | null;
+  /** 窄写入端口：只改标签。内容字段的写入仍只能走 RepoStore 的保存/编辑流程 */
+  updateTags(id: string, add?: string[], remove?: string[]): MemoryRecord;
 }
 
 export interface PackInfo {

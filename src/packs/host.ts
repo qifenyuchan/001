@@ -258,6 +258,16 @@ export class PackHost {
           timeoutMs: Number(o?.timeoutMs ?? DEFAULT_TIMEOUT[name]),
         });
       },
+      getRecord: (id: string) => this.opts.repo.get(String(id || "")) || null,
+      updateTags: (id: string, add?: string[], remove?: string[]) => {
+        const rec = this.opts.repo.get(String(id || ""));
+        if (!rec) throw new NorthstarError("NOT_FOUND", `record not found: ${id}`);
+        const minus = new Set((remove || []).map(String));
+        const plus = (add || []).map(String).filter(t => t && !minus.has(t));
+        // 新标签放前面：核心对标签有条数上限，截断时先保住本次新增的
+        const merged = [...new Set([...plus, ...(rec.tags || []).filter(t => !minus.has(t))])];
+        return this.opts.repo.update({ id: rec.id, tags: merged });
+      },
     };
 
     try {

@@ -141,7 +141,22 @@ node dist/cli.js pack rebuild export-obsidian   # 派生数据从真源重放
 - 包加载失败、hook 抛错、派生数据损坏都只降级，**核心照常启动**；连续失败 10 次自动停用。
 - 派生数据在 `data/.packs/<id>/`，可随时删掉重建，不参与同步。
 
-现有包：`export-obsidian`（导出 Obsidian 兼容 Markdown vault）。架构与写包规范见 **[docs/PACKS.md](docs/PACKS.md)**。
+现有包：
+
+| 包 | 提供 | 适合 |
+|---|---|---|
+| `export-obsidian` | 导出 Obsidian 兼容 Markdown vault | 把记忆扔进自己的笔记库 |
+| `creative`（文创写作） | `story` 剧情字段 + 触发式注入 + 真相层（`memory_pin`） | 长篇连载、角色扮演、跑团 |
+
+`creative` 的触发式注入是**世界书机制**：记录里填「触发词」（人物名自动算），当前输入命中才带回来，
+不命中就不占上下文。钉为「设定」的记录在检索与注入里都优先。
+
+```bash
+node dist/cli.js pack install packs/creative
+node dist/cli.js pack rebuild creative   # 重建触发索引（从真源重放）
+```
+
+架构与写包规范见 **[docs/PACKS.md](docs/PACKS.md)**。
 
 ## 跨设备 / 跨网络（本地优先）
 
@@ -229,7 +244,8 @@ node dist/migrate.js --apply   --from "<旧>/pc_host/data" --data ./data --repor
 ## 测试
 
 ```bash
-npm test        # 13 套件 85 断言：schema/store/recall/range/search/mcp/ui/sync/migrate/auth/security/profiles/packs
+npm test        # 14 套件 91 断言：schema/store/recall/range/search/mcp/ui/sync/migrate/auth/security/profiles/packs/creative
+npm run eval    # 检索质量基线：Hit@5 / MRR@5 / 延迟 / 注入有界性（CI 门禁 --min-mrr 0.85）
 npm run build   # TypeScript 构建（仅开发需要；dist/ 已随包提供）
 ```
 
