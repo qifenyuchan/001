@@ -61,7 +61,7 @@ if (!config.noPacks) {
         packsDir: config.packsDir,
         dataDir: config.dataDir,
         repo,
-        coreVersion: "2.11.0",
+        coreVersion: "2.11.1",
         log: {
             info: () => { },
             warn: (s) => process.stderr.write(`[pack] WARN ${s}\n`),

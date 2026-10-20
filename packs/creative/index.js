@@ -45,7 +45,7 @@ function triggersOf(rec) {
   return [...out];
 }
 
-function readIndex(ctx) {
+function readIndexRaw(ctx) {
   try {
     const raw = ctx.storage.read(INDEX);
     if (!raw) return null;
@@ -57,16 +57,24 @@ function readIndex(ctx) {
   return null;
 }
 
+/** 查询用：条数对不上说明有外部写入没经过 onSave，宁可重建也不要拿过期索引静默漏答 */
+function readIndex(ctx) {
+  const v = readIndexRaw(ctx);
+  if (v && v.n === ctx.records().length) return v;
+  return null;
+}
+
 function buildIndex(ctx) {
   const byTrigger = {};
-  for (const rec of ctx.records()) {
+  const records = ctx.records();
+  for (const rec of records) {
     if (rec.kind === "range") continue;
     for (const t of triggersOf(rec)) {
       if (!byTrigger[t]) byTrigger[t] = [];
       if (!byTrigger[t].includes(rec.id)) byTrigger[t].push(rec.id);
     }
   }
-  const idx = { v: 1, built_at: Date.now(), byTrigger };
+  const idx = { v: 1, n: records.length, built_at: Date.now(), byTrigger };
   ctx.storage.write(INDEX, JSON.stringify(idx));
   return idx;
 }
@@ -126,14 +134,17 @@ export function register(api) {
     { default: true }
   );
 
-  // 维护触发索引：写入时增量更新，删除时摘除
+  // 维护触发索引：写入时增量更新，删除时摘除。
+  // 并发写同一索引文件可能丢更新，但条数 n 会立刻对不上，下次读就整表重建——
+  // 派生数据可以丢，不能「丢着还继续用」。
   api.hook("onSave", (rec, prev, ctx) => {
-    const idx = readIndex(ctx) || buildIndex(ctx);
+    const idx = readIndexRaw(ctx) || buildIndex(ctx);
     if (prev && prev.id) dropFromIndex(idx, prev.id);
     if (rec && rec.id) {
       dropFromIndex(idx, rec.id);
       if (rec.kind !== "range") addToIndex(idx, rec);
     }
+    idx.n = ctx.records().length;
     ctx.storage.write(INDEX, JSON.stringify(idx));
   });
 

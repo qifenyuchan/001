@@ -95,6 +95,37 @@ test("注入不超预算", async () => {
   assert.ok(r.text.length <= 260, `超预算: ${r.text.length}`);
 });
 
+test("索引过期（外部写入没走 onSave）会自愈，不静默漏答", async () => {
+  const { repo, host, dataDir } = await setup();
+  const a = turn(repo, { 时间: "第一章", 事件: "得到断剑", 结果: "有线索", 触发词: "断剑" });
+  host.onSave(repo.get(a.id), null); // 索引 n=1
+  turn(repo, { 时间: "第二章", 事件: "赶路", 结果: "抵达" }); // 直接写，绕过包
+
+  const r = recall(repo, { session_id: "长夜", input: "断剑" }, 1200, host);
+  assert.match(r.text, /得到断剑/, "过期索引不能导致漏答");
+
+  const idx = JSON.parse(fs.readFileSync(path.join(dataDir, ".packs", "creative", "triggers.json"), "utf8"));
+  assert.equal(idx.n, 2, "重建后条数应对上");
+});
+
+test("索引一致性：重复 onSave 不产生重复条目，删除会摘除", async () => {
+  const { repo, host, dataDir } = await setup();
+  const a = turn(repo, { 时间: "第一章", 事件: "得到断剑", 结果: "有线索", 触发词: "断剑" });
+  const rec = repo.get(a.id);
+  host.onSave(rec, null);
+  host.onSave(rec, null); // 重复通知（重放/重建）
+  host.onSave(rec, rec);
+
+  const idxFile = path.join(dataDir, ".packs", "creative", "triggers.json");
+  let idx = JSON.parse(fs.readFileSync(idxFile, "utf8"));
+  assert.equal(idx.byTrigger["断剑"].length, 1, "同一记录同一触发词只能有一条");
+
+  repo.softDelete(a.id);
+  host.onSave(null, rec);
+  idx = JSON.parse(fs.readFileSync(idxFile, "utf8"));
+  assert.equal(idx.byTrigger["断剑"], undefined, "删除后触发词应摘除");
+});
+
 test("触发索引可删可重建（派生数据）", async () => {
   const { repo, host, dataDir } = await setup();
   const a = turn(repo, { 时间: "第一章", 事件: "得到断剑", 结果: "有了线索", 触发词: "断剑" });
