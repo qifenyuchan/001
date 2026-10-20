@@ -103,7 +103,7 @@ if (!config.noPacks) {
     packsDir: config.packsDir,
     dataDir: config.dataDir,
     repo,
-    coreVersion: "2.8.0",
+    coreVersion: "2.8.1",
   });
   try {
     await host.load();
@@ -137,7 +137,7 @@ if (config.httpPort > 0 && !config.noMcp) {
   startHttpRpcServer(
     {
       serverName: "northstar-memory",
-      serverVersion: "2.8.0",
+      serverVersion: "2.8.1",
       instructions: INSTRUCTIONS,
       tools: toolDefs,
       callTool: tools.callTool,
@@ -159,7 +159,7 @@ if (config.httpPort > 0 && !config.noMcp) {
 if (!config.uiOnly && !config.noMcp) {
   startRpcServer({
     serverName: "northstar-memory",
-    serverVersion: "2.8.0",
+    serverVersion: "2.8.1",
     instructions: INSTRUCTIONS,
     tools: toolDefs,
     callTool: tools.callTool,

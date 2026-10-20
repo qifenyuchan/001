@@ -3,7 +3,7 @@
 import type { MemoryRecord } from "../core/types.js";
 import { RepoStore } from "../store/repo.js";
 import { tokenize } from "../core/tokenize.js";
-import { scoreRecord } from "../core/score.js";
+import { buildCorpus, docTexts, scoreDoc } from "../core/score.js";
 import { deriveTitleFromFields } from "../core/title.js";
 import { safeSlice } from "../core/text.js";
 import { sanitizeKey } from "../core/util.js";
@@ -34,12 +34,15 @@ export function searchRecords(
     const key = sanitizeKey(opts.session_key);
     records = records.filter(r => r.session_key === key);
   }
+  // 一次展开 + 一次统计：IDF 与平均长度需要全语料视角，逐条独立打分算不出来
+  const docs = records.map(rec => docTexts(rec, repo.profileOf(rec.profile)));
+  const corpus = buildCorpus(docs, terms);
   const scored: { rec: MemoryRecord; score: number }[] = [];
-  for (const rec of records) {
-    let s = scoreRecord(rec, terms, repo.profileOf(rec.profile));
+  for (const d of docs) {
+    let s = scoreDoc(d, terms, corpus);
     // 包的 score hook 只在原本命中时调整排序，不负责「从无到有」捞记录
-    if (s > 0 && host) s += host.score(rec, { query, terms });
-    if (s > 0) scored.push({ rec, score: s });
+    if (s > 0 && host) s += host.score(d.rec, { query, terms });
+    if (s > 0) scored.push({ rec: d.rec, score: s });
   }
   scored.sort((a, b) => b.score - a.score || b.rec.created_at - a.rec.created_at);
   const results = scored.slice(0, limit).map(({ rec, score }) => ({

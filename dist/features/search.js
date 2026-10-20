@@ -1,6 +1,6 @@
 // search.ts — 按需检索（中文 bigram + 字段加权；不自动注入）
 import { tokenize } from "../core/tokenize.js";
-import { scoreRecord } from "../core/score.js";
+import { buildCorpus, docTexts, scoreDoc } from "../core/score.js";
 import { deriveTitleFromFields } from "../core/title.js";
 import { safeSlice } from "../core/text.js";
 import { sanitizeKey } from "../core/util.js";
@@ -14,14 +14,17 @@ export function searchRecords(repo, query, opts = {}, host) {
         const key = sanitizeKey(opts.session_key);
         records = records.filter(r => r.session_key === key);
     }
+    // 一次展开 + 一次统计：IDF 与平均长度需要全语料视角，逐条独立打分算不出来
+    const docs = records.map(rec => docTexts(rec, repo.profileOf(rec.profile)));
+    const corpus = buildCorpus(docs, terms);
     const scored = [];
-    for (const rec of records) {
-        let s = scoreRecord(rec, terms, repo.profileOf(rec.profile));
+    for (const d of docs) {
+        let s = scoreDoc(d, terms, corpus);
         // 包的 score hook 只在原本命中时调整排序，不负责「从无到有」捞记录
         if (s > 0 && host)
-            s += host.score(rec, { query, terms });
+            s += host.score(d.rec, { query, terms });
         if (s > 0)
-            scored.push({ rec, score: s });
+            scored.push({ rec: d.rec, score: s });
     }
     scored.sort((a, b) => b.score - a.score || b.rec.created_at - a.rec.created_at);
     const results = scored.slice(0, limit).map(({ rec, score }) => ({
