@@ -61,7 +61,7 @@ if (!config.noPacks) {
         packsDir: config.packsDir,
         dataDir: config.dataDir,
         repo,
-        coreVersion: "2.10.0",
+        coreVersion: "2.11.0",
         log: {
             info: () => { },
             warn: (s) => process.stderr.write(`[pack] WARN ${s}\n`),
@@ -80,6 +80,12 @@ try {
     switch (cmd) {
         case "save": {
             const fields = typeof flags.fields === "string" ? JSON.parse(flags.fields) : undefined;
+            const hasFields = fields && typeof fields === "object" && Object.values(fields).some(v => String(v || "").trim());
+            const hasContent = typeof flags.content === "string" && !!flags.content.trim();
+            const hasRaw = typeof flags.raw === "string" && !!flags.raw.trim();
+            if (!hasFields && !hasContent && !hasRaw) {
+                throw new NorthstarError("EMPTY_INPUT", "nothing to save: provide --fields, --content or --raw");
+            }
             const res = repo.upsertTurn({
                 session_id: typeof flags.session === "string" ? flags.session : "default",
                 profile: typeof flags.profile === "string" ? flags.profile : undefined,

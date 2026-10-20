@@ -1,5 +1,26 @@
 # Changelog
 
+## 2.11.0 — 2026-10-20
+
+深度测试（场景级）扩展：新增 4 个套件，测试 114 → 145
+
+- `tests/cli.test.mjs`：真实进程跑 CLI 全链路（save/recall/search/list/get/
+  versions/undo/export/pack 生命周期/别名/中文会话/空输入）
+- `tests/http.test.mjs`：HTTP 传输层（initialize、tools/list 3 vs 9、
+  tools/call、-32601、坏 JSON 400、错误路径 404、非 POST 405、通知 202）
+- `tests/edge.test.mjs`：超长字段、原文窗口、emoji 会话名、Windows 保留名、
+  大小写会话、turn_no 边界、turn/range 同轮、方案切换
+- `tests/multi.test.mjs`：两实例共用 data 目录（刷新可见、墓碑传播、
+  乐观锁冲突、交替写、同轮覆盖）
+
+测试抓到的四个真问题：
+- **单字段无上限**：5 万字字段原样落盘（148KB/条）→ 硬上限 5000 字并置 truncated
+- **`turn_no: 0 / -5` 被静默自动编号** → 改为只在未传时自动，非法值报 INVALID_ARG
+- **CLI 与 MCP 校验不一致**：CLI 能写空记录 → 补 EMPTY_INPUT
+- **方案不匹配的错误信息死循环** → 改成「请求了 X，当前是 Y，先 switch」
+
+新增 `npm run test:unit`（快循环，约 25s）
+
 ## 2.10.0 — 2026-10-20
 
 - **Q8 版本回滚**：`versions <id>` 列出历史版本（编辑快照 + 删除墓碑），

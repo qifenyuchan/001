@@ -56,7 +56,7 @@ export function partialFields(input, profile = GENERAL_PROFILE) {
         const k = keyFor(rawKey, profile);
         if (!k)
             continue;
-        out[k] = rawVal == null ? "" : String(rawVal).replace(/\r\n/g, "\n").trim();
+        out[k] = rawVal == null ? "" : capValue(String(rawVal).replace(/\r\n/g, "\n").trim()).value;
     }
     return out;
 }
@@ -136,6 +136,25 @@ export function buildSkeleton(raw, nowMs, profile = GENERAL_PROFILE) {
     out[profile.excerpt_field] = safeSlice(clean, 120) || "（原文已归档）";
     return out;
 }
+/** 单个字段的硬上限：写入永不拒绝，但也绝不允许无限膨胀（一个网页倒进「事情」就是 100KB） */
+export const FIELD_HARD_MAX = 5000;
+function capValue(v) {
+    if (v.length <= FIELD_HARD_MAX)
+        return { value: v, cut: false };
+    return { value: v.slice(0, FIELD_HARD_MAX - 1) + "…", cut: true };
+}
+function capFields(fields, keys) {
+    let cut = false;
+    const out = { ...fields };
+    for (const k of keys) {
+        const r = capValue(out[k] || "");
+        if (r.cut) {
+            out[k] = r.value;
+            cut = true;
+        }
+    }
+    return { fields: out, cut };
+}
 function windowRaw(raw, head, tail) {
     if (!raw)
         return { text: "", truncated: false };
@@ -173,13 +192,18 @@ export function buildTurn(input, opts, existing) {
         fields = buildSkeleton(rawText, opts.nowMs, profile);
         qualityHint = "degraded";
     }
+    // 单字段硬上限：超长内容截断并标记，避免整页网页被塞进一个字段
+    const capped = capFields(fields, keys);
+    fields = capped.fields;
     const { missing, blank, quality } = assess(fields, qualityHint, profile);
     const contentForTags = fieldsToContent(fields, profile) + "\n" + rawText.slice(0, 500);
     const tags = normTags(input.tags && input.tags.length ? input.tags : deriveTags(contentForTags));
     const ratingRaw = Number(input.rating);
     const rating = isFinite(ratingRaw) ? Math.max(1, Math.min(5, Math.floor(ratingRaw))) : 3;
     const now = opts.nowMs;
-    const turnNo = existing ? existing.turn_no : Number(input.turn_no) || 1;
+    const rawTurn = input.turn_no;
+    const turnProvided = rawTurn !== undefined && rawTurn !== null && String(rawTurn).trim() !== "";
+    const turnNo = existing ? existing.turn_no : turnProvided ? Math.floor(Number(rawTurn)) : NaN;
     if (!Number.isSafeInteger(turnNo) || turnNo < 1 || turnNo > 1000000) {
         throw new NorthstarError("INVALID_ARG", `turn_no must be an integer in [1, 1000000], got ${input.turn_no}`);
     }
@@ -208,7 +232,7 @@ export function buildTurn(input, opts, existing) {
         fields,
         raw_text: rawText,
         raw_truncated: rawTruncated,
-        truncated: !!input.truncated,
+        truncated: !!input.truncated || capped.cut,
         missing,
         blank,
         quality,

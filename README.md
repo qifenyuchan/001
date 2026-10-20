@@ -222,6 +222,7 @@ data/
   logs/server.log                   运行日志（5MB 轮转）
 ```
 
+单个字段硬上限 5000 字（超出截断并置 `truncated`，写入永不拒绝）；原文按头尾窗口截断。
 一条记录一个 JSON 文件：可读、可 git、可手工修、可直接备份。
 `content`（七字段文本）与 `title` 都是读时派生，不落盘，杜绝两处不一致。
 每条记录带 `space_id / updated_by / field_meta`，多设备合并时按字段时间戳与设备 id 决胜。
@@ -247,7 +248,8 @@ node dist/migrate.js --apply   --from "<旧>/pc_host/data" --data ./data --repor
 ## 测试
 
 ```bash
-npm test        # 18 套件 114 断言：schema/store/recall/range/search/mcp/ui/sync/migrate/auth/security/profiles/packs/creative/invariants/safety/undo
+npm test        # 21 套件 145 断言：schema/store/recall/range/search/mcp/ui/sync/migrate/auth/security/profiles/packs/creative/invariants/safety/undo/multi/edge/http/cli
+npm run test:unit  # 同上，去掉 CLI/HTTP/多实例（快循环，约 25s）
 npm run eval    # 检索质量基线：Hit@5 / MRR@5 / 延迟 / 注入有界性（CI 门禁 --min-mrr 0.85）
 npm run smoke   # 发布冒烟：打包 → 装进干净目录 → 当真实用户跑一遍（CI 上也跑）
 npm run build   # TypeScript 构建（仅开发需要；dist/ 已随包提供）

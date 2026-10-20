@@ -449,14 +449,19 @@ export class RepoStore {
     this.withSessionLock(st, () => {
       // 锁内按文件名重取（不解析全量），避免两个进程同时取到同一个 turn_no（P0-4）
       const turns = this.turnFileMap(st);
-      const turnNo = input.turn_no && Number(input.turn_no) > 0 ? Math.floor(Number(input.turn_no)) : Math.max(0, ...turns.keys()) + 1;
+      // 只在「没传」时才自动编号；传了 0 / 负数 / 非数字要报错，不能静默当成自动编号
+      const rawTurn = input.turn_no as unknown;
+      const turnProvided = rawTurn !== undefined && rawTurn !== null && String(rawTurn).trim() !== "";
+      let maxTurn = 0;
+      for (const k of turns.keys()) if (k > maxTurn) maxTurn = k;
+      const turnNo = turnProvided ? Math.floor(Number(rawTurn)) : maxTurn + 1;
       const existingName = turns.get(turnNo);
       const existing = existingName ? this.readRecordFile(st, existingName) || undefined : undefined;
       const active = this.activeProfileId();
       const wanted = String(input.profile || "").trim() || active;
       const profile = this.profiles.require(wanted);
       if (wanted !== active) {
-        throw new NorthstarError("PROFILE_INACTIVE", `active profile is ${active}; run: node dist/cli.js profile use ${active}`);
+        throw new NorthstarError("PROFILE_INACTIVE", `write rejected: active profile is ${active}, requested ${wanted}. Switch first: profile use ${wanted}`);
       }
       if (existing && wanted !== existing.profile) {
         throw new NorthstarError("CONFLICT", `profile cannot change on the same turn (${existing.profile} -> ${wanted})`);
