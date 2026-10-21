@@ -6,7 +6,7 @@ export const SEVEN_FIELD_KEYS = ["时间", "地点", "人物", "事情", "原因
 export type SevenKey = string;
 export type SevenFields = Record<string, string>;
 
-export type RecordKind = "turn" | "range";
+export type RecordKind = "turn" | "range" | "consolidation";
 export type Quality = "complete" | "partial" | "degraded";
 
 export interface RangeMeta {
@@ -36,6 +36,8 @@ export interface MemoryRecord {
   schema: 1;
   id: string;
   kind: RecordKind;
+  /** 巩固记录的主题（kind=consolidation）；检索的强信号 */
+  theme?: string;
   profile: string;
   space_id: string;
   session_id: string;
@@ -114,6 +116,8 @@ export interface SaveInput {
   source?: string;
   /** 记录时间（毫秒）。用于导入、迁移与评测；不传则取当前时间 */
   created_at?: number;
+  /** 巩固主题（kind=consolidation 必填） */
+  theme?: string;
 }
 
 export interface SaveResult {
@@ -128,6 +132,8 @@ export interface SaveResult {
   missing: SevenKey[];
   range_due: boolean;
   range?: RangeMeta;
+  /** 巩固主题（kind=consolidation 时返回） */
+  theme?: string;
   created: boolean;
 }
 

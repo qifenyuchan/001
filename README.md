@@ -93,6 +93,8 @@ node dist/cli.js recall --session s1 [--before 12] [--scope range]
 node dist/cli.js search "记忆 注入" [--session s1] [--limit 5] [--explain]
 node dist/cli.js list   [--session s1] [--page 2]
 node dist/cli.js get <id>
+node dist/cli.js consolidate --session s1  # 列出还没被巩固覆盖的轮次
+node dist/cli.js consolidate --session s1 --covers 1,3,5 --theme 断剑线索 --fields '{...}'
 node dist/cli.js versions <id>          # 这条记录的历史版本（编辑快照 + 删除墓碑）
 node dist/cli.js undo <id> [--steps N]  # 回退到 N 个版本之前；回退本身也能再回退
 node dist/cli.js sessions [--all]
@@ -249,8 +251,10 @@ node dist/migrate.js --apply   --from "<旧>/pc_host/data" --data ./data --repor
 ## 测试
 
 ```bash
-npm test        # 26 套件 181 断言：schema/store/recall/range/search/time/mcp/ui/ui-write/sync/migrate/migrate-edge/auth/security/profiles/packs/pack-edge/creative/invariants/safety/undo/multi/edge/http/cli
+npm test        # 27 套件 190 断言：schema/store/recall/range/search/time/mcp/ui/ui-write/sync/migrate/migrate-edge/auth/security/profiles/packs/pack-edge/creative/invariants/safety/undo/consolidate/multi/edge/http/cli
 npm run test:unit  # 同上，去掉 CLI/HTTP/多实例（快循环，约 25s）
+node --test tests/search.test.mjs   # 最快的姿势：直跑单文件（约 3s，绕开 npm 的 ~9s 启动开销）
+npm run test:watch                  # 改动即重跑（node --test --watch）
 npm run eval    # 检索质量基线：分类别 Hit@5 / MRR@5 / 延迟 / 注入有界性（CI 门禁 --min-hit 0.92 --min-mrr 0.86）
 npm run smoke   # 发布冒烟：打包 → 装进干净目录 → 当真实用户跑一遍（CI 上也跑）
 npm run build   # TypeScript 构建（仅开发需要；dist/ 已随包提供）

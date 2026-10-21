@@ -47,10 +47,19 @@ export const TOOL_DEFS: ToolDef[] = [
         content: { type: "string", description: "Optional: key：value lines matching the profile fields" },
         raw_text: { type: "string", description: "Optional raw turn text (question + answer), head/tail windowed" },
         truncated: { type: "boolean", description: "True if the turn was cut off" },
-        kind: { type: "string", enum: ["turn", "range"], description: "turn (default) or range" },
+        kind: {
+          type: "string",
+          enum: ["turn", "range", "consolidation"],
+          description: "turn (default), range (period summary), or consolidation (distilled conclusion over several turns)",
+        },
         range_from: { type: "number", description: "For kind=range: first turn number" },
         range_to: { type: "number", description: "For kind=range: last turn number" },
-        covers: { type: "array", items: { type: "string" }, description: "For kind=range: covered record ids" },
+        covers: {
+          type: "array",
+          items: { type: "string" },
+          description: "kind=range: covered record ids; kind=consolidation: the turn numbers this conclusion replaces",
+        },
+        theme: { type: "string", description: "For kind=consolidation: one-line topic (strong search signal)" },
         tags: { type: "array", items: { type: "string" } },
         rating: { type: "number", description: "1-5, default 3" },
         source: {
@@ -160,7 +169,7 @@ export function createTools(repo: RepoStore, config: Config, host?: PackHost) {
   }
 
   function save(args: Record<string, any>) {
-    const kind = args.kind === "range" ? "range" : "turn";
+    const kind = args.kind === "range" ? "range" : args.kind === "consolidation" ? "consolidation" : "turn";
     const hasFields = args.fields && typeof args.fields === "object" && Object.values(args.fields).some(v => String(v || "").trim());
     const hasContent = args.content && String(args.content).trim();
     const hasRaw = args.raw_text && String(args.raw_text).trim();
@@ -189,9 +198,11 @@ export function createTools(repo: RepoStore, config: Config, host?: PackHost) {
       covers: args.covers,
       tags: args.tags,
       rating: args.rating,
+      theme: args.theme ? String(args.theme) : undefined,
       source: SAVE_SOURCES.has(String(args.source || "")) ? String(args.source) : "agent",
     };
-    const result = kind === "range" ? repo.upsertRange(input) : repo.upsertTurn(input);
+    const result =
+      kind === "range" ? repo.upsertRange(input) : kind === "consolidation" ? repo.upsertConsolidation(input) : repo.upsertTurn(input);
     if (host) {
       try {
         const saved = repo.get(result.id);
@@ -222,6 +233,7 @@ export function createTools(repo: RepoStore, config: Config, host?: PackHost) {
       missing: result.missing,
       range_due: result.range_due,
       range_auto: rangeAuto,
+      ...(result.kind === "consolidation" ? { theme: result.theme, covers: result.range?.covers } : {}),
       created: result.created,
     });
   }

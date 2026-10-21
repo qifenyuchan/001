@@ -23,6 +23,7 @@ import {
   assess,
   assessFor,
   buildRange,
+  buildConsolidation,
   buildTurn,
   ensureRecordShape,
   isConflictCandidate,
@@ -568,6 +569,68 @@ export class RepoStore {
       range: rec.range,
       created,
     };
+  }
+
+  /** 巩固：把一批轮次的结论收进一条记录（文本由调用方给出）。同 from-to 重复巩固 = 覆盖更新 */
+  upsertConsolidation(input: SaveInput): SaveResult {
+    this.maybeRefresh();
+    const sessionId = String(input.session_id || "").trim() || "default";
+    const st = this.ensureSession(sessionId);
+    let rec!: MemoryRecord;
+    let created = false;
+    this.withSessionLock(st, () => {
+      const built = buildConsolidation({ ...input, session_id: sessionId }, {
+        nowMs: Date.now(),
+        rawHead: this.opts.rawHead,
+        rawTail: this.opts.rawTail,
+        sessionKeyOverride: st.key,
+        deviceId: this.deviceId,
+        spaceId: this.spaceId,
+        profile: this.profiles.require(this.activeProfileId()),
+      });
+      const file = this.fileFor(st, built);
+      const existing = fs.existsSync(file) ? this.readRecordFile(st, path.basename(file)) || undefined : undefined;
+      const merged = existing
+        ? { ...built, id: existing.id, revision: existing.revision + 1, created_at: existing.created_at }
+        : built;
+      if (existing) this.snapshot(st, existing, "consolidate-edit");
+      atomicWriteJson(file, merged);
+      touchRev(st.dir);
+      rec = merged;
+      created = !existing;
+    });
+    st.records.set(rec.id, rec);
+    this.byId.set(rec.id, rec);
+    st.rev = revStamp(st.dir);
+    return {
+      ok: true,
+      id: rec.id,
+      kind: "consolidation",
+      profile: rec.profile,
+      session_key: st.key,
+      turn_no: rec.turn_no,
+      next_turn_no: this.nextTurnNo(st.key),
+      quality: rec.quality,
+      missing: rec.missing,
+      range_due: false,
+      range: rec.range,
+      theme: rec.theme,
+      created,
+    };
+  }
+
+  /** 还没被任何巩固覆盖的轮次（按时间正序）——给「该巩固什么」提供候选 */
+  uncoveredTurns(sessionKey: string): MemoryRecord[] {
+    this.maybeRefresh();
+    const st = this.sessions.get(sanitizeKey(sessionKey));
+    if (!st) return [];
+    const covered = new Set<string>();
+    for (const r of st.records.values()) {
+      if (r.kind === "consolidation" && r.range) for (const c of r.range.covers) covered.add(c);
+    }
+    return [...st.records.values()]
+      .filter(r => r.kind === "turn" && !covered.has(String(r.turn_no)))
+      .sort((a, b) => a.turn_no - b.turn_no);
   }
 
   get(id: string): MemoryRecord | undefined {

@@ -270,16 +270,43 @@ export function buildRange(input, opts, existing) {
     };
 }
 export function recordFileName(rec) {
+    if (rec.kind === "consolidation" && rec.range) {
+        return `cons-${String(rec.range.from).padStart(4, "0")}-${String(rec.range.to).padStart(4, "0")}.json`;
+    }
     if (rec.kind === "range" && rec.range) {
         return `range-${String(rec.range.from).padStart(4, "0")}-${String(rec.range.to).padStart(4, "0")}.json`;
     }
     return `turn-${String(rec.turn_no).padStart(4, "0")}.json`;
 }
+/** 巩固记录：把一批（可不相邻）轮次的结论收进一条记录。文本由调用方给出，核心不生成内容 */
+export function buildConsolidation(input, opts, existing) {
+    const covers = Array.isArray(input.covers) ? input.covers.map(x => String(x)).slice(0, 200) : [];
+    if (!covers.length)
+        throw new NorthstarError("INVALID_ARG", "consolidation requires covers (record ids or turn numbers)");
+    const theme = String(input.theme || "").trim().slice(0, 40);
+    if (!theme)
+        throw new NorthstarError("INVALID_ARG", "consolidation requires a theme");
+    const turns = covers.map(x => Math.floor(Number(x))).filter(x => Number.isSafeInteger(x) && x >= 1 && x <= 1000000);
+    if (!turns.length)
+        throw new NorthstarError("INVALID_ARG", "covers must contain turn numbers");
+    const from = Math.min(...turns);
+    const to = Math.max(...turns);
+    const base = buildTurn({ ...input, turn_no: to }, opts, existing);
+    const range = { from, to, covers: turns.map(String), unresolved: [] };
+    return {
+        ...base,
+        kind: "consolidation",
+        turn_no: to,
+        range,
+        theme,
+        tags: Array.from(new Set([...(base.tags || []), "巩固"])).slice(0, 8),
+    };
+}
 export function ensureRecordShape(value) {
     const v = value;
     if (!v || typeof v !== "object")
         return null;
-    if (v.schema !== 1 || !v.fields || (v.kind !== "turn" && v.kind !== "range"))
+    if (v.schema !== 1 || !v.fields || (v.kind !== "turn" && v.kind !== "range" && v.kind !== "consolidation"))
         return null;
     if (!isSafeId(v.id) || !isSafeKey(v.session_key))
         return null;
@@ -308,6 +335,20 @@ export function ensureRecordShape(value) {
     rec.updated_at = Number.isFinite(Number(rec.updated_at)) ? Number(rec.updated_at) : rec.created_at;
     rec.updated_by = rec.updated_by ? String(rec.updated_by) : "legacy";
     rec.space_id = rec.space_id ? String(rec.space_id) : "personal";
+    if (rec.kind === "consolidation") {
+        const r = rec.range;
+        const from = Number(r && r.from);
+        const to = Number(r && r.to);
+        if (!Number.isSafeInteger(from) || !Number.isSafeInteger(to) || from < 1 || to < from || to > 1000000)
+            return null;
+        rec.range = {
+            from,
+            to,
+            covers: Array.isArray(r && r.covers) ? r.covers.map((x) => String(x)) : [],
+            unresolved: [],
+        };
+        rec.theme = rec.theme ? String(rec.theme).slice(0, 40) : "";
+    }
     if (rec.kind === "range") {
         const r = rec.range;
         const from = Number(r && r.from);

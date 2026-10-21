@@ -65,7 +65,7 @@ if (!config.noPacks) {
     packsDir: config.packsDir,
     dataDir: config.dataDir,
     repo,
-    coreVersion: "2.13.0",
+    coreVersion: "2.14.0",
     reservedTools: TOOL_DEFS.map(t => t.name),
     log: {
       info: () => {},
@@ -258,6 +258,43 @@ try {
       });
       break;
     }
+    case "consolidate": {
+      const session = typeof flags.session === "string" ? flags.session : "default";
+      const fieldsArg = typeof flags.fields === "string" ? flags.fields : "";
+      // 不带 --fields：列出还没被巩固覆盖的轮次
+      if (!fieldsArg) {
+        const open = repo.uncoveredTurns(session);
+        out({
+          ok: true,
+          session,
+          uncovered: open.map(r => ({
+            turn_no: r.turn_no,
+            id: r.id,
+            title: String(r.fields[repo.profileOf(r.profile).title_field] || "").slice(0, 40),
+            at: r.created_at,
+          })),
+          hint: "写入：consolidate --session <id> --covers 1,3,5 --theme <主题> --fields '<json>'",
+        });
+        break;
+      }
+      const covers = String(flags.covers || "")
+        .split(",")
+        .map(s => s.trim())
+        .filter(Boolean);
+      if (!covers.length) throw new NorthstarError("INVALID_ARG", "consolidate requires --covers 1,3,5");
+      if (!flags.theme) throw new NorthstarError("INVALID_ARG", "consolidate requires --theme <主题>");
+      const res = repo.upsertConsolidation({
+        session_id: session,
+        kind: "consolidation",
+        theme: String(flags.theme),
+        covers,
+        fields: JSON.parse(fieldsArg),
+        tags: Array.isArray(flags.tag) ? flags.tag : typeof flags.tag === "string" ? [flags.tag] : undefined,
+        source: "cli",
+      });
+      out({ ...res, note: "原轮次保留未删；巩固记录独立成一条，检索时优先" });
+      break;
+    }
     case "pack": {
       const sub = pos[0] || "list";
       const id = String(pos[1] || flags.id || "").trim();
@@ -317,6 +354,7 @@ try {
           "  node dist/cli.js list [--session id] [--kind turn|range] [--page N] [--page-size 20]",
           "  node dist/cli.js get <id>",
           "  node dist/cli.js sessions [--all]",
+          "  node dist/cli.js consolidate --session <id> [--covers 1,3,5 --theme <主题> --fields '<json>']",
           "  node dist/cli.js versions <record_id>",
           "  node dist/cli.js undo <record_id> [--steps N]",
           "  node dist/cli.js profile [list|use <id>|install custom|path|remove <id>]",

@@ -192,7 +192,7 @@ export function createUiServer(repo: RepoStore, config: Config): http.Server {
       }
 
       if (req.method === "GET" && p === "/api/health") {
-        json(res, 200, { ok: true, name: "northstar-memory", version: "2.13.0" });
+        json(res, 200, { ok: true, name: "northstar-memory", version: "2.14.0" });
         return;
       }
 

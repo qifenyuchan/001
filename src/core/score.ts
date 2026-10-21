@@ -12,6 +12,7 @@ const B = 0.75; // 长度归一强度
 // 标题由 title_field 派生，与字段正文是同一段文字——单独计分会把该字段算两遍。
 // 实测（eval v2，58 记录 / 83 查询）：去掉标题计分后 keyword MRR 0.901→0.966。
 const TAG_W = 3;
+const THEME_W = 4; // 巩固记录的主题：一句话概括，比正文更能代表"这条在讲什么"
 const RAW_W = 1;
 
 export interface DocTexts {
@@ -19,6 +20,8 @@ export interface DocTexts {
   profile: Profile;
   title: string;
   tags: string;
+  /** 巩固主题（只有 kind=consolidation 有） */
+  theme: string;
   raw: string;
   fields: Record<string, string>;
 }
@@ -64,6 +67,7 @@ export function docTexts(rec: MemoryRecord, profile: Profile): DocTexts {
     profile,
     title: deriveTitleFromFields(rec.fields, rec.raw_text, profile).toLowerCase(),
     tags: (rec.tags || []).join(" ").toLowerCase(),
+    theme: asText(rec.theme || "").toLowerCase(),
     raw: asText(rec.raw_text).toLowerCase(),
     fields,
   };
@@ -75,7 +79,7 @@ export function buildCorpus(docs: DocTexts[], terms: string[], opts: { now?: num
   for (const d of docs) {
     // 逐段检查，避免把一条记录拼成一个大字符串（省一次分配与拷贝）
     for (const t of terms) {
-      if (d.title.indexOf(t) >= 0 || d.tags.indexOf(t) >= 0 || d.raw.indexOf(t) >= 0) {
+      if (d.title.indexOf(t) >= 0 || d.tags.indexOf(t) >= 0 || d.theme.indexOf(t) >= 0 || d.raw.indexOf(t) >= 0) {
         df.set(t, (df.get(t) || 0) + 1);
         continue;
       }
@@ -87,6 +91,7 @@ export function buildCorpus(docs: DocTexts[], terms: string[], opts: { now?: num
       }
     }
     sum.__tags = (sum.__tags || 0) + d.tags.length;
+    sum.__theme = (sum.__theme || 0) + d.theme.length;
     sum.__raw = (sum.__raw || 0) + d.raw.length;
     for (const f of d.profile.fields) sum[f.key] = (sum[f.key] || 0) + (d.fields[f.key] || "").length;
   }
@@ -123,6 +128,7 @@ export function scoreDoc(d: DocTexts, terms: string[], corpus: ScoreCorpus, out?
       if (out) out.push({ term: t, field, weight, tf: countOcc(text, t), contribution: Math.round(c * 100) / 100 });
     };
     bump("标签", TAG_W, d.tags, corpus.avg.__tags || 1);
+    if (d.theme) bump("主题", THEME_W, d.theme, corpus.avg.__theme || 1);
     for (const f of d.profile.fields) bump(label(f.key), f.weight, d.fields[f.key] || "", corpus.avg[f.key] || 1);
     bump("原文", RAW_W, d.raw, corpus.avg.__raw || 1);
     if (hit > 0) matched++;
@@ -139,7 +145,9 @@ export function scoreDoc(d: DocTexts, terms: string[], corpus: ScoreCorpus, out?
     const ageDays = Math.max(0, (corpus.now - d.rec.created_at) / DAY);
     score *= 1 / (1 + ageDays / corpus.halfLifeDays);
   }
+  // range 是过程摘要，降权避免压过具体轮次；consolidation 是收敛后的结论，略加权
   if (d.rec.kind === "range") score *= 0.7;
+  if (d.rec.kind === "consolidation") score *= 1.2;
   return score;
 }
 

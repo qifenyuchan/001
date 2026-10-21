@@ -37,6 +37,10 @@ function isoOf(ms) {
 }
 
 function recordFileName(rec) {
+  if (rec.kind === "consolidation") {
+    const r = rec.range || { from: 0, to: 0 };
+    return `巩固-${pad4(r.from)}-${pad4(r.to)}-${safeName(rec.theme || pickTitle(rec))}.md`;
+  }
   if (rec.kind === "range") {
     const r = rec.range || { from: 0, to: 0 };
     return `汇总-${pad4(r.from)}-${pad4(r.to)}-${safeName(pickTitle(rec))}.md`;
@@ -85,9 +89,12 @@ function sessionIndex(sessionKey, recs) {
   lines.push(`共 ${recs.length} 条记忆。`);
   lines.push("");
   const turns = recs
-    .filter(r => r.kind !== "range")
+    .filter(r => r.kind === "turn")
     .sort((a, b) => a.turn_no - b.turn_no);
   const ranges = recs.filter(r => r.kind === "range").sort((a, b) => (a.range?.from || 0) - (b.range?.from || 0));
+  const cons = recs
+    .filter(r => r.kind === "consolidation")
+    .sort((a, b) => (a.range?.from || 0) - (b.range?.from || 0));
   for (const r of turns) {
     lines.push(`- 第 ${r.turn_no} 轮 · ${isoOf(r.created_at).slice(0, 10)} · [[${recordFileName(r).replace(/\.md$/, "")}]]`);
   }
@@ -97,6 +104,15 @@ function sessionIndex(sessionKey, recs) {
     lines.push("");
     for (const r of ranges) {
       lines.push(`- 第 ${r.range?.from}-${r.range?.to} 轮 · [[${recordFileName(r).replace(/\.md$/, "")}]]`);
+    }
+  }
+  if (cons.length) {
+    lines.push("");
+    lines.push("## 巩固结论");
+    lines.push("");
+    for (const r of cons) {
+      const covered = (r.range?.covers || []).join("、");
+      lines.push(`- ${r.theme || "未命名"} · 覆盖第 ${covered} 轮 · [[${recordFileName(r).replace(/\.md$/, "")}]]`);
     }
   }
   lines.push("");

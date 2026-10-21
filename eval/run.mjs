@@ -22,6 +22,7 @@ const minHitArg = argv.indexOf("--min-hit");
 const minHit = minHitArg >= 0 ? Number(argv[minHitArg + 1]) : null;
 const minMrrArg = argv.indexOf("--min-mrr");
 const minMrr = minMrrArg >= 0 ? Number(argv[minMrrArg + 1]) : null;
+const noCons = argv.includes("--no-cons");
 const catArg = argv.indexOf("--cat");
 const onlyCat = catArg >= 0 ? argv[catArg + 1] : null;
 const decayArg = argv.indexOf("--decay");
@@ -29,6 +30,7 @@ const decay = decayArg >= 0 ? Number(argv[decayArg + 1]) : 0;
 const K = 5;
 
 const CAT_LABEL = {
+  consolidation: "巩固记录",
   keyword: "关键词直给",
   fuzzy: "口语/同义",
   "long-record": "长记录里找答案",
@@ -48,6 +50,18 @@ for (const s of suite.sessions) {
     const r = repo.upsertTurn({ session_id: s.key, turn_no: t.turn, fields: t.fields, created_at });
     idOf.set(`${s.key}#${t.turn}`, r.id);
   }
+}
+
+// 巩固记录：把一批轮次的结论收进一条（文本由 seed 提供，核心不生成内容）
+for (const c of noCons ? [] : suite.consolidations || []) {
+  const r = repo.upsertConsolidation({
+    session_id: c.session,
+    kind: "consolidation",
+    theme: c.theme,
+    covers: (c.covers || []).map(String),
+    fields: c.fields,
+  });
+  idOf.set(`cons:${c.session}:${c.theme}`, r.id);
 }
 
 const rows = [];
@@ -106,6 +120,7 @@ const summary = {
   mrr_at_5: Number(overall.mrr.toFixed(4)),
   latency_ms: { p50: Number(p(0.5).toFixed(2)), p95: Number(p(0.95).toFixed(2)) },
   records: idOf.size,
+  consolidations: noCons ? 0 : (suite.consolidations || []).length,
   budget_max: maxBlock,
   budget_ok: maxBlock <= budget,
   by_cat: Object.fromEntries(
