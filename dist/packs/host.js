@@ -21,6 +21,23 @@ function cmpVer(a, b) {
     }
     return 0;
 }
+/** 包 id 来自命令行/清单，必须白名单校验后才能拼进路径（否则 `pack remove ../x` 会删到包目录外） */
+function assertPackId(id) {
+    const s = String(id == null ? "" : id).trim();
+    if (!ID_RE.test(s)) {
+        throw new NorthstarError("INVALID_ARG", `invalid pack id: ${s || "(empty)"}（只允许 a-z0-9_- 开头、最长 32 位，不含路径分隔符）`);
+    }
+    return s;
+}
+/** 入口文件必须落在包目录内：manifest 的 main 写了 ../../evil.js 也不能逃出包边界 */
+function insideOrNull(dir, entryName) {
+    const root = path.resolve(dir);
+    const full = path.resolve(root, String(entryName || ""));
+    const rel = path.relative(root, full);
+    if (!rel || rel.startsWith("..") || path.isAbsolute(rel))
+        return null;
+    return full;
+}
 function apiCompatible(spec) {
     if (!spec)
         return true;
@@ -166,7 +183,12 @@ export class PackHost {
             return;
         }
         const entryName = String(manifest.main || "index.js");
-        const entry = path.join(dir, entryName);
+        const entry = insideOrNull(dir, entryName);
+        if (!entry) {
+            this.failed.set(manifest.id, `entry escapes pack dir: ${entryName}`);
+            this.log.warn(`${manifest.id}: entry escapes pack dir (${entryName}) — refused`);
+            return;
+        }
         if (!fs.existsSync(entry)) {
             this.failed.set(manifest.id, `entry not found: ${entryName}`);
             this.log.warn(`${manifest.id}: entry not found (${entryName})`);
@@ -507,8 +529,9 @@ export class PackHost {
         const manifest = this.readManifest(src);
         if (!manifest)
             throw new NorthstarError("INVALID_ARG", "invalid pack.json (id/version required)");
-        if (!fs.existsSync(path.join(src, String(manifest.main || "index.js")))) {
-            throw new NorthstarError("INVALID_ARG", "pack entry not found");
+        const entry = insideOrNull(src, String(manifest.main || "index.js"));
+        if (!entry || !fs.existsSync(entry)) {
+            throw new NorthstarError("INVALID_ARG", "pack entry not found (must be inside the pack dir)");
         }
         const dst = path.join(this.opts.packsDir, manifest.id);
         if (fs.existsSync(dst)) {
@@ -529,34 +552,37 @@ export class PackHost {
         return info;
     }
     async enable(id) {
-        const dir = path.join(this.opts.packsDir, id);
+        const pid = assertPackId(id);
+        const dir = path.join(this.opts.packsDir, pid);
         const manifest = this.readManifest(dir);
         if (!manifest)
-            throw new NorthstarError("NOT_FOUND", `pack not installed: ${id}`);
-        this.state.packs[id] = {
+            throw new NorthstarError("NOT_FOUND", `pack not installed: ${pid}`);
+        this.state.packs[pid] = {
             enabled: true,
             version: manifest.version,
-            installed_at: this.state.packs[id]?.installed_at || Date.now(),
-            source: this.state.packs[id]?.source || dir,
+            installed_at: this.state.packs[pid]?.installed_at || Date.now(),
+            source: this.state.packs[pid]?.source || dir,
         };
         this.writeState();
-        this.failures.delete(id);
+        this.failures.delete(pid);
         await this.loadPack(dir, manifest);
     }
     disable(id) {
-        if (!this.manifests.has(id) && !this.loaded.has(id))
-            throw new NorthstarError("NOT_FOUND", `pack not installed: ${id}`);
-        this.state.packs[id] = {
+        const pid = assertPackId(id);
+        if (!this.manifests.has(pid) && !this.loaded.has(pid))
+            throw new NorthstarError("NOT_FOUND", `pack not installed: ${pid}`);
+        this.state.packs[pid] = {
             enabled: false,
-            version: this.manifests.get(id)?.version || "",
-            installed_at: this.state.packs[id]?.installed_at || Date.now(),
-            source: this.state.packs[id]?.source || "",
+            version: this.manifests.get(pid)?.version || "",
+            installed_at: this.state.packs[pid]?.installed_at || Date.now(),
+            source: this.state.packs[pid]?.source || "",
         };
         this.writeState();
-        this.loaded.delete(id);
+        this.loaded.delete(pid);
     }
     remove(id, opts = {}) {
-        const manifest = this.manifests.get(id) || this.readManifest(path.join(this.opts.packsDir, id));
+        const pid = assertPackId(id);
+        const manifest = this.manifests.get(pid) || this.readManifest(path.join(this.opts.packsDir, pid));
         const profiles = manifest?.provides?.profiles || [];
         const using = profiles.length
             ? this.opts.repo.all().filter(r => profiles.includes(r.profile)).length
@@ -564,19 +590,20 @@ export class PackHost {
         if (using > 0 && !opts.force) {
             throw new NorthstarError("CONFLICT", `${using} records use profile(s) ${profiles.join(",")}; pass --force (data stays readable)`);
         }
-        rmrf(path.join(this.opts.packsDir, id));
-        delete this.state.packs[id];
+        rmrf(path.join(this.opts.packsDir, pid));
+        delete this.state.packs[pid];
         this.writeState();
-        this.manifests.delete(id);
-        this.loaded.delete(id);
-        this.failed.delete(id);
-        return { removed: id, records_using_profile: using };
+        this.manifests.delete(pid);
+        this.loaded.delete(pid);
+        this.failed.delete(pid);
+        return { removed: pid, records_using_profile: using };
     }
     /** 清空派生数据并从真源重放 onSave */
     rebuild(id) {
-        if (!this.loaded.has(id))
-            throw new NorthstarError("NOT_FOUND", `pack not loaded: ${id}`);
-        rmrf(path.join(this.opts.dataDir, ".packs", id));
+        const pid = assertPackId(id);
+        if (!this.loaded.has(pid))
+            throw new NorthstarError("NOT_FOUND", `pack not loaded: ${pid}`);
+        rmrf(path.join(this.opts.dataDir, ".packs", pid));
         const recs = this.opts.repo.all();
         let n = 0;
         for (const rec of recs) {

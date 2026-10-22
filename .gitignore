@@ -6,3 +6,9 @@ migration/report_*.json
 .DS_Store
 
 *.tgz
+
+# 测试台运行产物（每次跑都会变，报告写进 docs/）
+attack/report.json
+stress/report.json
+sim/report.json
+sim/s2_misses.txt

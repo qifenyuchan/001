@@ -232,6 +232,7 @@ export function createTools(repo: RepoStore, config: Config, host?: PackHost) {
       quality: result.quality,
       missing: result.missing,
       range_due: result.range_due,
+      truncated: result.truncated,
       range_auto: rangeAuto,
       ...(result.kind === "consolidation" ? { theme: result.theme, covers: result.range?.covers } : {}),
       created: result.created,

@@ -112,6 +112,9 @@ export class RepoStore {
   private corruptedCount = 0;
   private lastMaintenance = 0;
   private lastMergeCount = 0;
+  /** 空间级 .rev：任何写入都会更新它，跨进程失效判断因此从 O(会话数) 降到 O(1) */
+  private spaceRev = 0;
+  private lastDeepCheck = 0;
 
   constructor(opts: RepoOptions) {
     this.opts = opts;
@@ -174,7 +177,15 @@ export class RepoStore {
     this.corruptedCount = 0;
     for (const key of listDirs(this.sessionsDir)) this.loadSession(key);
     this.lastMaintenance = 0;
+    this.spaceRev = revStamp(this.spaceRoot);
+    this.lastDeepCheck = Date.now();
     this.maintainIfDue(true);
+  }
+
+  /** 写入后必须调用：让空间级 rev 前进（同进程立刻可见，跨进程下一次检查可见） */
+  private bumpSpace(): void {
+    touchRev(this.spaceRoot);
+    this.spaceRev = revStamp(this.spaceRoot);
   }
 
   private sessionDir(key: string): string {
@@ -195,7 +206,11 @@ export class RepoStore {
         created_at: now,
         updated_at: now,
       };
-      return { key, meta, dir: this.sessionDir(key), records: new Map(), rev: 0 };
+      // 必须登记：不登记的话 sessions.size 永远小于目录数，maybeRefresh 的
+      // 「目录数一致」判断会一直失败——一个来路不明的目录就能让每次操作都整库重扫
+      const unsafe: SessionState = { key, meta, dir: this.sessionDir(key), records: new Map(), rev: 0 };
+      this.sessions.set(key, unsafe);
+      return unsafe;
     }
     const dir = this.sessionDir(key);
     const meta = this.readMeta(key, dir);
@@ -257,22 +272,34 @@ export class RepoStore {
     this.applyTombstones();
   }
 
-  // 跨进程失效：任一会话 .rev 变化即整库重扫（目录数几十，代价可忽略）
+  // 跨进程失效：先看空间级 .rev（1 次 stat），不一致才整库重扫；
+  // 逐会话的深检限流到 1s 一次（200 个会话时逐会话 stat 要 15ms，压在每次读写上是灾难）
   private maybeRefresh(): void {
     this.maintainIfDue();
-    let stale = false;
-    for (const [key, st] of this.sessions) {
-      if (revStamp(st.dir) !== st.rev) {
-        stale = true;
-        break;
-      }
-    }
     const dirs = listDirs(this.sessionsDir);
-    if (!stale && dirs.length === this.sessions.size) return;
+    const cheapSame = revStamp(this.spaceRoot) === this.spaceRev && dirs.length === this.sessions.size;
+    if (cheapSame) {
+      const now = Date.now();
+      if (now - this.lastDeepCheck < 1000) return;
+      this.lastDeepCheck = now;
+      let stale = false;
+      for (const st of this.sessions.values()) {
+        if (revStamp(st.dir) !== st.rev) {
+          stale = true;
+          break;
+        }
+      }
+      if (!stale) return;
+    }
     this.sessions.clear();
     this.byId.clear();
     this.corruptedCount = 0;
     for (const key of dirs) this.loadSession(key);
+    // 方案注册表也要刷新：别的进程可能刚装了新方案并切过去，注册表不刷新就认不出这个 id
+    this.profiles.refresh();
+    this.active = this.readActiveProfile();
+    this.spaceRev = revStamp(this.spaceRoot);
+    this.lastDeepCheck = Date.now();
   }
 
   private recomputeQuality(rec: MemoryRecord): void {
@@ -307,6 +334,9 @@ export class RepoStore {
     const p = this.profiles.require(id);
     this.active = p.id;
     atomicWriteJson(this.profileFile(), { schema: 1, active: p.id, updated_at: Date.now() });
+    // 推进空间 rev：别的进程（常驻 MCP 服务）下次检查就会重扫并重读 active，
+    // 否则「终端里 profile use story」对已经跑起来的服务不生效，还会让它报「先切换」
+    this.bumpSpace();
     return p;
   }
 
@@ -351,6 +381,7 @@ export class RepoStore {
       this.sessions.set(key, st);
       this.writeMeta(st);
       touchRev(dir);
+      this.bumpSpace();
       st.rev = revStamp(dir);
     }
     return st;
@@ -457,7 +488,14 @@ export class RepoStore {
       const turnProvided = rawTurn !== undefined && rawTurn !== null && String(rawTurn).trim() !== "";
       let maxTurn = 0;
       for (const k of turns.keys()) if (k > maxTurn) maxTurn = k;
-      const turnNo = turnProvided ? Math.floor(Number(rawTurn)) : maxTurn + 1;
+      // 传了就必须是整数：1.5 / "abc" / true 不能悄悄变成第 1 轮（闸门在入口，不在落盘时）
+      if (turnProvided) {
+        const numeric = typeof rawTurn === "number" || (typeof rawTurn === "string" && rawTurn.trim() !== "");
+        if (!numeric || !Number.isInteger(Number(rawTurn))) {
+          throw new NorthstarError("INVALID_ARG", `turn_no must be an integer, got ${String(rawTurn)}`);
+        }
+      }
+      const turnNo = turnProvided ? Number(rawTurn) : maxTurn + 1;
       const existingName = turns.get(turnNo);
       const existing = existingName ? this.readRecordFile(st, existingName) || undefined : undefined;
       const active = this.activeProfileId();
@@ -485,6 +523,7 @@ export class RepoStore {
       if (existing) this.snapshot(st, existing, "edit");
       atomicWriteJson(this.fileFor(st, built), built);
       touchRev(st.dir);
+      this.bumpSpace();
       rec = built;
       created = !existing;
     });
@@ -506,6 +545,7 @@ export class RepoStore {
       quality: rec.quality,
       missing: rec.missing,
       range_due: rangeDue,
+      truncated: rec.truncated,
       created,
     };
   }
@@ -549,6 +589,7 @@ export class RepoStore {
       if (existing) this.snapshot(st, existing, "range-edit");
       atomicWriteJson(this.fileFor(st, built), built);
       touchRev(st.dir);
+      this.bumpSpace();
       rec = built;
       created = !existing;
     });
@@ -567,6 +608,7 @@ export class RepoStore {
       missing: rec.missing,
       range_due: false,
       range: rec.range,
+      truncated: rec.truncated,
       created,
     };
   }
@@ -596,6 +638,7 @@ export class RepoStore {
       if (existing) this.snapshot(st, existing, "consolidate-edit");
       atomicWriteJson(file, merged);
       touchRev(st.dir);
+      this.bumpSpace();
       rec = merged;
       created = !existing;
     });
@@ -615,6 +658,7 @@ export class RepoStore {
       range_due: false,
       range: rec.range,
       theme: rec.theme,
+      truncated: rec.truncated,
       created,
     };
   }
@@ -707,6 +751,7 @@ export class RepoStore {
     st.meta.name_source = "user";
     this.writeMeta(st);
     touchRev(st.dir);
+    this.bumpSpace();
     st.rev = revStamp(st.dir);
     return st.meta;
   }
@@ -771,6 +816,7 @@ export class RepoStore {
       this.snapshot(st, fresh, "edit");
       atomicWriteJson(file, updated);
       touchRev(st.dir);
+      this.bumpSpace();
     });
     st.records.set(updated.id, updated);
     this.byId.set(updated.id, updated);
@@ -802,6 +848,7 @@ export class RepoStore {
         throw new NorthstarError("IO_ERROR", `delete failed: ${e.message}`);
       }
       touchRev(st.dir);
+      this.bumpSpace();
     });
     st.records.delete(rec.id);
     this.byId.delete(rec.id);
@@ -829,6 +876,7 @@ export class RepoStore {
       st.records.delete(rec.id);
       this.byId.delete(rec.id);
       touchRev(st.dir);
+      this.bumpSpace();
       st.rev = revStamp(st.dir);
     }
   }
@@ -859,6 +907,7 @@ export class RepoStore {
           withLock(this.lockDir, st.key, () => {
             atomicWriteJson(this.fileFor(st, mergedRec), mergedRec);
             touchRev(st.dir);
+            this.bumpSpace();
           });
           st.records.set(mergedRec.id, mergedRec);
           this.byId.set(mergedRec.id, mergedRec);
@@ -1004,6 +1053,7 @@ export class RepoStore {
       this.withSessionLock(st, () => {
         atomicWriteJson(target, restored);
         touchRev(st.dir);
+        this.bumpSpace();
       });
       st.records.set(restored.id, restored);
       this.byId.set(restored.id, restored);
@@ -1037,6 +1087,7 @@ export class RepoStore {
       };
       atomicWriteJson(target, restored);
       touchRev(st.dir);
+      this.bumpSpace();
     });
     st.records.set(restored.id, restored);
     this.byId.set(restored.id, restored);

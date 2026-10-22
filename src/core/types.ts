@@ -134,6 +134,8 @@ export interface SaveResult {
   range?: RangeMeta;
   /** 巩固主题（kind=consolidation 时返回） */
   theme?: string;
+  /** 这次写入是否被截断（字段超 5000 或 raw 超窗口）——必须回给调用方，否则它不知道内容被剪了 */
+  truncated?: boolean;
   created: boolean;
 }
 

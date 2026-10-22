@@ -13,6 +13,18 @@ import type { MemoryRecord } from "../core/types.js";
 
 const MAX_BODY = 2 * 1024 * 1024;
 
+// 页面层加固：禁止被第三方页面嵌套（点击劫持）+ 最小 CSP（本 UI 零外部资源，只有行内事件/样式）
+const HTML_HEADERS: Record<string, string> = {
+  "Content-Type": "text/html; charset=utf-8",
+  "Cache-Control": "no-store",
+  "X-Content-Type-Options": "nosniff",
+  "X-Frame-Options": "DENY",
+  "Referrer-Policy": "no-referrer",
+  "Content-Security-Policy":
+    "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; " +
+    "connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'",
+};
+
 function json(res: http.ServerResponse, status: number, payload: unknown): void {
   const body = JSON.stringify(payload);
   res.writeHead(status, {
@@ -82,9 +94,23 @@ function decorate(rec: MemoryRecord, sessionName?: string, profile = GENERAL_PRO
 function hostAllowed(hostHeader: string | undefined, authToken: string): boolean {
   if (!hostHeader) return false;
   if (authToken) return true; // 有令牌时允许任意 Host（远程/域名访问）
-  const host = hostHeader.startsWith("[") ? hostHeader.slice(0, hostHeader.indexOf("]") + 1) : hostHeader.split(":")[0];
-  const h = host.toLowerCase();
+  // 用 URL 解析而不是切字符串：`127.0.0.1:1@evil.com` 这种 Host 前半段是用户名，不能当回环
+  let h = "";
+  try {
+    h = new URL(`http://${hostHeader}`).hostname.toLowerCase();
+  } catch {
+    return false;
+  }
   return h === "127.0.0.1" || h === "localhost" || h === "[::1]" || h === "::1";
+}
+
+/** 解码路径段：畸形百分号是客户端错误（400），不是服务端 500 */
+function decodeSegment(raw: string): string | null {
+  try {
+    return decodeURIComponent(raw);
+  } catch {
+    return null;
+  }
 }
 
 // 同源校验：浏览器跨站 POST 会带 Origin/Sec-Fetch-Site；本地 CLI/脚本无 Origin 放行
@@ -130,7 +156,9 @@ export function createUiServer(repo: RepoStore, config: Config): http.Server {
           return;
         }
         url.searchParams.delete("token");
-        const target = url.pathname + (url.search ? url.search : "") + url.hash;
+        // 只允许站内绝对路径：`//evil.com` 会被浏览器当成协议相对 URL（开放重定向）
+        const safePath = "/" + url.pathname.replace(/^\/+/, "");
+        const target = safePath + (url.search ? url.search : "");
         res.writeHead(302, {
           "Set-Cookie": `${TOKEN_COOKIE}=${encodeURIComponent(config.authToken)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=2592000`,
           Location: target || "/",
@@ -145,7 +173,7 @@ export function createUiServer(repo: RepoStore, config: Config): http.Server {
           if (p.startsWith("/api/")) {
             json(res, 401, { ok: false, error: "unauthorized: token required" });
           } else {
-            res.writeHead(401, { "Content-Type": "text/html; charset=utf-8" });
+            res.writeHead(401, HTML_HEADERS);
             res.end(
               `<!doctype html><meta charset="utf-8"><body style="font-family:system-ui;background:#0f1216;color:#e6edf3;padding:40px">` +
                 `<h2>需要访问令牌</h2><p>请在地址后追加 <code>/?token=你的令牌</code> 打开一次，浏览器会记住。</p></body>`
@@ -186,13 +214,13 @@ export function createUiServer(repo: RepoStore, config: Config): http.Server {
           json(res, 500, { ok: false, error: "ui/index.html missing" });
           return;
         }
-        res.writeHead(200, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" });
+        res.writeHead(200, HTML_HEADERS);
         res.end(html);
         return;
       }
 
       if (req.method === "GET" && p === "/api/health") {
-        json(res, 200, { ok: true, name: "northstar-memory", version: "2.14.0" });
+        json(res, 200, { ok: true, name: "northstar-memory", version: "2.15.0" });
         return;
       }
 
@@ -244,7 +272,11 @@ export function createUiServer(repo: RepoStore, config: Config): http.Server {
       }
 
       if (req.method === "GET" && p.startsWith("/api/session/")) {
-        const key = decodeURIComponent(p.slice("/api/session/".length));
+        const key = decodeSegment(p.slice("/api/session/".length));
+        if (key === null) {
+          json(res, 400, { ok: false, error: "malformed percent-encoding in session key" });
+          return;
+        }
         const sessions = repo.listSessions(true);
         const view = sessions.find(s => s.session_key === key);
         if (!view) {
@@ -261,7 +293,11 @@ export function createUiServer(repo: RepoStore, config: Config): http.Server {
       }
 
       if (req.method === "GET" && p.startsWith("/api/record/")) {
-        const id = decodeURIComponent(p.slice("/api/record/".length));
+        const id = decodeSegment(p.slice("/api/record/".length));
+        if (id === null) {
+          json(res, 400, { ok: false, error: "malformed percent-encoding in record id" });
+          return;
+        }
         const rec = repo.get(id);
         if (!rec) {
           json(res, 404, { ok: false, error: "record not found" });

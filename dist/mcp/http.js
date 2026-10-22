@@ -42,10 +42,19 @@ export function createHttpRpcServer(opts) {
                 return;
             }
             const hostHeader = String(req.headers.host || "");
-            const hostOnly = hostHeader.startsWith("[") ? hostHeader.slice(0, hostHeader.indexOf("]") + 1) : hostHeader.split(":")[0];
-            if (!opts.authToken && !isLoopbackHost(hostOnly)) {
-                json(res, 403, { jsonrpc: "2.0", id: null, error: { code: -32002, message: "host not allowed" } });
-                return;
+            if (!opts.authToken) {
+                // 用 URL 解析取主机名：切字符串会把 `127.0.0.1:1@evil.com` 误判成回环
+                let hostOnly = "";
+                try {
+                    hostOnly = new URL(`http://${hostHeader}`).hostname;
+                }
+                catch {
+                    hostOnly = "";
+                }
+                if (!isLoopbackHost(hostOnly)) {
+                    json(res, 403, { jsonrpc: "2.0", id: null, error: { code: -32002, message: "host not allowed" } });
+                    return;
+                }
             }
             const origin = req.headers.origin;
             if (origin) {

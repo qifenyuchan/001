@@ -1,18 +1,24 @@
 // tokenize.ts — 分词/命中/邻近族（自 turn_memory 内核原样保留）
 import { asText } from "./text.js";
+/** 查询串上限：检索是同步的，一条超大查询能阻塞整个进程（单线程）——先截断再分词 */
+export const MAX_QUERY_CHARS = 4096;
+/** 词项上限：词项数 × 记录数 × 字段数 就是这轮检索的 indexOf 次数，必须封顶 */
+export const MAX_TERMS = 128;
 export function tokenize(q) {
-    const raw = asText(q).toLowerCase().trim();
+    const raw = asText(q).toLowerCase().trim().slice(0, MAX_QUERY_CHARS);
     if (!raw)
         return [];
     const coarse = raw
         .split(/[\s,，。;；:：!！?？、()（）\[\]【】"'`~@#$%^&*+=<>|/\\]+/)
         .filter(Boolean);
-    const set = {};
+    const seen = new Set();
     const terms = [];
     function push(t) {
+        if (terms.length >= MAX_TERMS)
+            return;
         t = t.trim();
-        if (t && !set[t]) {
-            set[t] = 1;
+        if (t && !seen.has(t)) {
+            seen.add(t);
             terms.push(t);
         }
     }

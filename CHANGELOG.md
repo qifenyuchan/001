@@ -1,5 +1,75 @@
 # Changelog
 
+## 2.15.0 — 2026-10-22
+
+三轮测试：攻击 36 条（`npm run attack`）＋ 压力 14 组（`npm run stress`）＋
+模拟 10 场景（`npm run sim`）。分别回答「边界被不被突破」「规模扛不扛得住」「照文档用记不记得住」。
+
+**攻击测试轮**——把「包目录」这条信任边界补实
+
+**严重**
+
+- `pack remove ../x` 会递归删掉包目录之外的任意目录（`remove` 直接 `path.join(packsDir, id)`
+  后 `rmrf`）：所有接受包 id 的入口统一走 `assertPackId()` 白名单，非法 id 直接拒绝
+- `pack enable ../x` 会 `import` 包目录之外的 JS 并执行：同上；`readManifest` 校验了 `id`
+  却漏了目录名
+
+**高**
+
+- `pack.json` 的 `main` 可写 `../../escape.js` 逃出包目录：`insideOrNull()` 校验入口文件
+  必须落在包目录内，`install` 的源目录同样校验
+
+**中**
+
+- 单条超长查询能把整个进程钉住（词项 × 记录 × 字段全量 `indexOf` 跑在主线程）：
+  `MAX_QUERY_CHARS=4096`、`MAX_TERMS=128`；实测 4 万字查询 792ms → 26ms
+- 分词去重表由对象换成 `Set`：`constructor` / `__proto__` 这类英文词原来会被当成
+  「已存在」静默丢弃
+- UI 页面补 `X-Frame-Options: DENY` + `frame-ancestors 'none'` CSP + `Referrer-Policy`
+
+**低**
+
+- Host 回环闸门被 `127.0.0.1:1@evil.com` 绕过（切字符串取主机名）：改用 URL 解析
+- 畸形百分号编码把客户端错误变 500：路径段 → 400，cookie 解码失败 → 退化成原值（401）
+- 令牌引导接口可被 `//evil.com/?token=…` 做开放重定向：目标路径强制单斜杠
+- `turn_no=1.5`/`true` 被静默取整成第 1 轮：入口要求整数，否则 `INVALID_ARG`
+
+**工程**
+
+- 新增攻击台 `attack/run.mjs`（`npm run attack`，36 条用例，输出 `attack/report.json`）
+- 新增回归 `tests/attack.test.mjs`（11 条断言）；测试 190 → **201**
+- 报告：`docs/ATTACK-REPORT.md`（含载荷、复现、修复、两条不修的取舍）
+- 评测无回归：Hit@5 0.965 / Recall@5 0.951 / MRR@5 0.928
+
+**压力测试轮**（14 组用例，`npm run stress`，报告 `docs/STRESS-REPORT.md`）
+
+- 读路径原本是 O(会话数)：每次读写都给每个会话 `stat` 一次 `.rev`。
+  200 个会话时 `get` 18.37ms、`save` 83.25ms。改为**空间级 `.rev` 快路径**（1 次 stat）
+  + 逐会话深检限流 1s 后：`get` **0.50ms（36×）**、`save` **35.82ms（2.3×）**
+- 连带 bug：目录名不合规时 `loadSession` 不登记状态，导致「目录数 === 会话数」永不成立，
+  **一个脏目录就让每次操作整库重扫**。已登记为空占位会话
+- 语义说明：经本进程/另一 RepoStore 写入**立刻可见**；外部工具直接落盘的文件最迟 1s 内可见
+  （原来靠 `.rev` mtime 判断，同样看不见「不动 `.rev` 的外部改动」，非新增盲区）
+- 实测确认的墙（不修，写进报告）：检索 3000 条 p50 34.6ms/p95 57.7ms，单次阻塞进程 123ms，
+  8 并发 p50 401ms；冷启动 1ms/条（CLI 每次 4s）；写吞吐受 fsync 限制 ≈30 条/s
+- 无泄漏：20s 混合负载 5292 次操作 0 错误，GC 后 heap 下降
+- 新增 `tests/stress.test.mjs`（4 条回归）；测试 201 → **205**
+
+**模拟测试轮**（10 个场景 / 179 条断言，真进程 + 真协议，报告 `docs/SIM-REPORT.md`）
+
+- **锁超时被降级成 `IO_ERROR`**：`withLock` 抛的是普通 `Error`，工具层只认 `NorthstarError`。
+  于是 Agent 把「别人正在写，稍后重试」当成「磁盘坏了」。改抛 `NorthstarError("LOCK_TIMEOUT")`
+- **跨进程切字段方案不生效**：`active` 在构造时缓存，终端里 `profile use story` 对已跑起来的服务无效，
+  而报错还在提示「请先 profile use story」——按提示做完仍然失败。切换时推进空间 rev，
+  重扫时重读 `profile.json` 并 `profiles.refresh()`（否则新装的方案 id 认不出来）
+- **写入被截断但返回体不说**：`SaveResult` 补 `truncated`，三个 upsert 回填、MCP 返回体带出，
+  Agent 才知道自己塞 20KB 进去被剪成 5000
+- 验证到位的（不改）：kill -9 重启后轮次连续不重不丢、两进程共写无重号无半条、
+  坏文件跳过并计数、冲突副本按字段合并、触发式注入命中才带回
+- 记录一个已知弱项：单字主题在长口语查询里整块丢失（只切 bigram），10 次回溯命中 9 次；
+  修它要动分词 + 重跑评测，属排序专项
+- 新增 `sim/run.mjs` + `tests/sim.test.mjs`（4 条回归）；测试 205 → **209**
+
 ## 2.14.0 — 2026-10-21
 
 巩固（调研里「空白且算法在圈外」的那一项）

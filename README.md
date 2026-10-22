@@ -161,6 +161,10 @@ node dist/cli.js pack install packs/creative
 node dist/cli.js pack rebuild creative   # 重建触发索引（从真源重放）
 ```
 
+**信任边界**：包是**可执行代码**——`packsDir`（默认 `~/.northstar/packs`）下的包会在任意命令启动时被
+`import`，没有签名、没有首次确认。所以别把这个目录放进云盘同步目录或共享仓库；只装你自己看过的包。
+包的 `main` 必须落在包目录内、id 必须是 `a-z0-9_-`，越界的清单会被拒绝加载。
+
 架构与写包规范见 **[docs/PACKS.md](docs/PACKS.md)**。
 
 ## 跨设备 / 跨网络（本地优先）
@@ -251,12 +255,15 @@ node dist/migrate.js --apply   --from "<旧>/pc_host/data" --data ./data --repor
 ## 测试
 
 ```bash
-npm test        # 27 套件 190 断言：schema/store/recall/range/search/time/mcp/ui/ui-write/sync/migrate/migrate-edge/auth/security/profiles/packs/pack-edge/creative/invariants/safety/undo/consolidate/multi/edge/http/cli
+npm test        # 30 套件 209 断言：schema/store/recall/range/search/time/mcp/ui/ui-write/sync/migrate/migrate-edge/auth/security/profiles/packs/pack-edge/creative/invariants/safety/undo/consolidate/multi/edge/http/cli/attack
 npm run test:unit  # 同上，去掉 CLI/HTTP/多实例（快循环，约 25s）
 node --test tests/search.test.mjs   # 最快的姿势：直跑单文件（约 3s，绕开 npm 的 ~9s 启动开销）
 npm run test:watch                  # 改动即重跑（node --test --watch）
 npm run eval    # 检索质量基线：分类别 Hit@5 / MRR@5 / 延迟 / 注入有界性（CI 门禁 --min-hit 0.92 --min-mrr 0.86）
 npm run smoke   # 发布冒烟：打包 → 装进干净目录 → 当真实用户跑一遍（CI 上也跑）
+npm run attack  # 攻击测试台：36 条用例打真实服务（穿越/CSRF/开放重定向/资源耗尽/包逃逸），逐条打印 BLOCKED/OPEN
+npm run stress  # 压力测试台：规模/并发/尾延迟/泄漏 14 组（--records=3000 --deep=600 可调）
+npm run sim     # 模拟测试台：真进程 + 真协议演 10 个场景（接续/崩溃重启/双写/故障注入/世界书）
 npm run build   # TypeScript 构建（仅开发需要；dist/ 已随包提供）
 ```
 
@@ -274,6 +281,9 @@ npm run build   # TypeScript 构建（仅开发需要；dist/ 已随包提供）
 - [Agent 协议](docs/AGENTS.md) · [压缩版 Skill](docs/SKILL.md)
 - [宿主接入](docs/HOSTS.md) · [数据格式](docs/DATA_FORMAT.md)
 - [多设备同步](docs/REMOTE.md) · [压力实测](docs/LOAD.md)
+- [攻击测试报告](docs/ATTACK-REPORT.md)：36 条用例、打通的 10 个问题与修复、两条不修的取舍
+- [压力测试报告](docs/STRESS-REPORT.md)：规模/并发/冷启动/泄漏实测，会话数敏感性的根因与修复
+- [模拟测试报告](docs/SIM-REPORT.md)：10 个用户故事跑真实 MCP 进程，3 个静默错误与 1 个已知弱项
 - [发布手册](docs/PUBLISH.md) · [产品与商业化](docs/PRODUCT.md)
 
 ## 明确不做（当前版本的范围护栏）

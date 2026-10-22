@@ -2,6 +2,7 @@
 
 import fs from "node:fs";
 import path from "node:path";
+import { NorthstarError } from "../core/types.js";
 
 export function ensureDir(p: string): void {
   fs.mkdirSync(p, { recursive: true });
@@ -135,9 +136,9 @@ export function withLock<T>(lockRoot: string, key: string, fn: () => T, timeoutM
           continue;
         }
         if (Date.now() > deadline) {
-          const err: any = new Error(`lock timeout: ${key}`);
-          err.code = "LOCK_TIMEOUT";
-          throw err;
+          // 必须是 NorthstarError：工具层只认这个类型，用普通 Error 会被降级成 IO_ERROR，
+          // 于是 Agent 分不清「别人正在写，稍后重试」和「磁盘坏了」
+          throw new NorthstarError("LOCK_TIMEOUT", `lock timeout: ${key}`);
         }
         sleepSync(25);
         continue;

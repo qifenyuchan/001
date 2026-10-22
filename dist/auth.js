@@ -20,8 +20,15 @@ export function parseCookies(header) {
             continue;
         const k = part.slice(0, i).trim();
         const v = part.slice(i + 1).trim();
-        if (k)
+        if (!k)
+            continue;
+        // 畸形百分号是客户端问题：退化成原值（比对必然失败），不能把整个请求变成 500
+        try {
             out[k] = decodeURIComponent(v);
+        }
+        catch {
+            out[k] = v;
+        }
     }
     return out;
 }
